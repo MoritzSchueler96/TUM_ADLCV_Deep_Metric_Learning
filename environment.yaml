@@ -1,4 +1,4 @@
-name: mpn_env3
+name: intra_batch_dml
 channels:
   - pytorch
   - anaconda
