@@ -127,3 +127,9 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+best_weights/
+data/
+results_nets_intermediate/
+results_nets/*
+results/*

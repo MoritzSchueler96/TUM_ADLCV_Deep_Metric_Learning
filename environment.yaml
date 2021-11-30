@@ -1,4 +1,4 @@
-name: mpn_env3
+name: dml-gnn
 channels:
   - pytorch
   - anaconda
