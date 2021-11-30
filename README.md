@@ -26,12 +26,29 @@ BN-Inception.
         cd intra_batch
 
 2. Create an Anaconda environment for this project:
-To set up a conda environment containing all used packages, please fist install 
-anaconda and then run
+To set up a conda environment containing all used packages, please fist install anaconda or miniconda and then install the environment either using the environment.yaml or the requirements.txt file:
    1.       conda env create -f environment.yml
     2.      conda activate intra_batch_dml
     3.      pip install torch-scatter==2.0.5 -f https://pytorch-geometric.com/whl/torch-1.5.0+cu102.html
     4. If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
+
+    Or:
+
+   1.      conda env create intra_batch_dml
+   2.      conda activate intra_batch_dml
+   3.      pip install -r requirements.txt
+   4.      pip install torch-scatter==2.0.5 -f https://pytorch-geometric.com/whl/torch-1.5.0+cu102.html
+   5.  (Optional) Install Apex
+
+            git clone https://github.com/NVIDIA/apex
+            cd apex
+        General:
+
+            pip install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
+        Python only:
+
+            pip install -v --disable-pip-version-check --no-cache-dir ./
+        Restart Environment?
 
 3. Download datasets:
 Make a data directory by typing 
@@ -57,22 +74,30 @@ Make a data directory by typing
 
         wget https://vision.in.tum.de/webshare/u/seidensc/intra_batch_connections/best_weights.zip
 
-    and unzip them.
+    and unzip them in the home directory. This will give you a folder best_weights with all trained models.
 
 # Usage
 You can find config files for training and testing on each of the datasets in the `config/` directory. For training and testing, you will have to input which one you want to use (see below). You will only be able to adapt some basic variables over the command line. For all others please refer to the yaml file directly.
 
 ## Testing
-To test to networks choose one of the config files for testing, e.g., `config_cars_test.yaml` to evaluate the performance on Cars196 and run:
+To test to networks choose one of the config files for testing, e.g., `config_cars_test.yaml` to evaluate the performance on Cars196 and run in the root directory:
 
-    python train.py --config_path config_cars_test.yaml --dataset_path <path to dataset> 
+    python train.py --config_path <path to config> --dataset_path <path to dataset> 
+
+In example:
+
+    python train.py --config_path config/config_cars_test.yaml --dataset_path /data/CARS
 
 The default dataset path is data.
 
 ## Training
 To train a network choose one of the config files for training like `config_cars_train.yaml` to train on Cars196 and run:
 
-    python train.py --config_path config_cars_train.yaml --dataset_path <path to dataset> --net_type <net type you want to use>
+    python train.py --config_path <path to config> --dataset_path <path to dataset> --net_type <net type you want to use>
+
+In example:
+
+    python train.py --config_path config/config_cars_train.yaml --dataset_path data/CARS --net_type resnet50
 
 Again, if you don't specify anything, the default setting will be used. For the net type you have the following options:
 
