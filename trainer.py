@@ -27,9 +27,41 @@ logger = logging.getLogger("GNNReID.Training")
 
 torch.manual_seed(0)
 
-class Trainer:
+def config_types(config):
+    print("*" * 53, "Config Types", "*" * 53)
+    for c in config:
+        if c not in ["mode", "application", "output_path", "graph_params", "dataset", "train_params", "eval_params"]:
+            print(c)
+            for cn in config[c]:
+                print(" "*3, cn)
+                for cnn in config[c][cn]:
+                    print(" "*6, cnn)
+                    if cnn not in ["bn_inception", "gnn", "classifier"]:
+                        print(" "*7, type(config[c][cn][cnn]))
+                    else:
+                        for cnnn in config[c][cn][cnn]:
+                            print(" "*9, cnnn)
+                            print(" "*10, type(config[c][cn][cnn][cnnn]))
+        else:
+            print(c)
+            if c in ["mode", "application", "output_path"]:
+                print(" ", type(config[c]))
+            else:
+                for cn2 in config[c]:
+                    print(" "*3, cn2)
+                    if cn2 not in ["loss_fn"]:
+                        print(" "*4, type(config[c][cn2]))
+                    else:
+                        for cnn2 in config[c][cn2]:
+                            print(" "*6, cnn2)
+                            print(" "*7, type(config[c][cn2][cnn2]))
+    print("*" * 120)
+    print("")
 
-    def __init__(self, config, save_folder_nets, save_folder_results, device, timer):
+class Trainer():
+    
+    def __init__(self, config, save_folder_nets, save_folder_results,
+                 device, timer):
         self.config = config
         self.device = device
         self.save_folder_results = save_folder_results
@@ -61,6 +93,7 @@ class Trainer:
         print("*" * 120)
         print("")
 
+        # config_types(self.config)
 
     def train(self):
         best_recall = 0
