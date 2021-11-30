@@ -1,0 +1,11 @@
+apex==0.9.10dev
+matplotlib==3.3.1
+numpy==1.19.1
+pandas==1.1.1
+Pillow==8.4.0
+PyYAML==6.0
+scikit_learn==1.0.1
+scipy==1.5.2
+torch==1.9.0
+torch_scatter==2.0.9
+torchvision==0.10.0
