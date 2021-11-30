@@ -30,17 +30,19 @@ To set up a conda environment containing all used packages, please fist install 
    1.       conda env create -f environment.yml
     2.      conda activate intra_batch_dml
     3.      pip install torch-scatter==2.0.5 -f https://pytorch-geometric.com/whl/torch-1.5.0+cu102.html
-    4.      pip install torch-geometric==2.0.2
-    5. If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
+    4.      pip install torch-sparse==0.6.12
+    5.      pip install torch-geometric==2.0.2
+    6. If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
 
     Or:
 
-   1.      conda env create intra_batch_dml
+   1.      conda create -n intra_batch_dml python=3.6.12
    2.      conda activate intra_batch_dml
    3.      pip install -r requirements.txt
    4.      pip install torch-scatter==2.0.5 -f https://pytorch-geometric.com/whl/torch-1.5.0+cu102.html
-   5.      pip install torch-geometric==2.0.2
-   6.  (Optional) Install Apex
+   5.      pip install torch-sparse==0.6.12
+   6.      pip install torch-geometric==2.0.2
+   7.  (Optional) Install Apex
 
             git clone https://github.com/NVIDIA/apex
             cd apex
