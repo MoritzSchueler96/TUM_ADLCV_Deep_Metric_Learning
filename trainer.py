@@ -27,6 +27,7 @@ logger = logging.getLogger('GNNReID.Training')
 torch.manual_seed(0)
 
 class Trainer():
+    
     def __init__(self, config, save_folder_nets, save_folder_results,
                  device, timer):
         self.config = config
@@ -45,16 +46,22 @@ class Trainer():
         self.best_recall = 0
         self.best_hypers = None
         self.num_iter = 30 if 'hyper' in config['mode'].split('_') else 1
-        print(torch.__version__)
-        print(torch.version.cuda)
+        print("")
+        print("*" * 55, "Versions", "*" * 55)
+        print("Torch version: ", torch.__version__)
+        print("Torch Cuda version: ", torch.version.cuda)
         import torch_scatter
-        print(torch_scatter.__version__)
-        print(torch.__file__)
+        print("Torch Scatter version: ", torch_scatter.__version__)
+        print("Torch file: ", torch.__file__)
         import sklearn
-        print(sklearn.__version__)
+        print("Scikit learn version: ", sklearn.__version__)
         import torchvision
-        print(torchvision.__version__)
-        print(torchvision.__file__)
+        print("Torchvision version: ", torchvision.__version__)
+        print("Torchvision file: ", torchvision.__file__)
+        print("*" * 120)
+        print("")
+
+
     def train(self):
         best_recall = 0
 
@@ -97,7 +104,7 @@ class Trainer():
                     self.config['dataset']['num_classes'])
 
             # Do training in mixed precision
-            if self.config['train_params']['is_apex']:
+            if self.config['train_params']['is_apex'] == 1:
                 global amp
                 from apex import amp
                 [self.encoder, self.gnn], self.opt = amp.initialize([self.encoder, self.gnn], self.opt,
@@ -176,7 +183,7 @@ class Trainer():
                         return 0.0, self.encoder
 
                     # Backpropagation
-                    if train_params['is_apex']:
+                    if train_params['is_apex'] == 1:
                         with amp.scale_loss(loss, self.opt) as scaled_loss:
                             scaled_loss.backward()
                     else:
