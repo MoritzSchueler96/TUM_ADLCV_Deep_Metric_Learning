@@ -1,6 +1,6 @@
 mode: "train" #train/test/hyper_search/pretraining
 application: "DML"
-output_paht: "."
+output_path: "."
 
 models:
   encoder_params:

@@ -1,6 +1,6 @@
 mode: "pseudo"
 application: "DML"
-output_paht: "."
+output_path: "."
 
 models:
   encoder_params:
