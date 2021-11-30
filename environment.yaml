@@ -75,6 +75,7 @@ dependencies:
   - tk=8.6.10=hbc83047_0
   - torchaudio=0.5.0=py36
   - torchvision=0.6.0=py36_cu102
+  - torch-geometric=2.0.2
   - tornado=6.1=py36h1d69622_0
   - typing_extensions=3.7.4.3=pyh06a4308_0
   - wheel=0.36.2=pyhd3eb1b0_0
@@ -84,5 +85,6 @@ dependencies:
   - yaml=0.2.5=h516909a_0
   - zlib=1.2.11=h7b6447c_3
   - zstd=1.4.5=h9ceee32_0
-prefix: /home/jenny/anaconda3/envs/mpn_env
+# prefix: /home/jenny/anaconda3/envs/mpn_env
+# prefix: /home/user/miniconda3/envs/intra_batch_dml
 
