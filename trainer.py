@@ -135,7 +135,7 @@ class Trainer():
             self.get_loss_fn(self.config["train_params"]["loss_fn"], self.config["dataset"]["num_classes"])
 
             # Do training in mixed precision
-            if self.config['train_params']['is_apex'] == 1:
+            if self.config['train_params']['is_apex']:
                 global amp
                 from apex import amp
 
@@ -213,7 +213,7 @@ class Trainer():
                         return 0.0, self.encoder
 
                     # Backpropagation
-                    if train_params['is_apex'] == 1:
+                    if train_params['is_apex']:
                         with amp.scale_loss(loss, self.opt) as scaled_loss:
                             scaled_loss.backward()
                     else:
