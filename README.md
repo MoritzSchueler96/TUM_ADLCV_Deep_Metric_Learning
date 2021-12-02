@@ -3,18 +3,17 @@
 This repository the official PyTorch implementation
 of `Learning Intra-Batch Connections for Deep Metric Learning`. The config files contain the same parameters as used in the paper.
 
-We use torch 1.7.1 and torchvision 0.6.0. While the training and inference should
+We use torch 1.10.0 and torchvision 0.11.1. While the training and inference should
 be able to be done correctly with the newer versions of the libraries, be aware
 that at times the network trained and tested using versions might diverge or reach lower
-results. We provide a `evironment.yaml` file to create a corresponding conda environment.
+results. We provide a `env.yaml` file as well as installation instructions with a requirements.txt file (for model agnosticity) to create a corresponding conda environment.
 
 We also support mixed-precision training via Nvidia Apex and describe how to use it in usage.
 
 As in the paper we support training on 4 datasets: CUB-200-2011, CARS 196, Stanford Online Products and In-Shop datasets.
 
 The majority of experiments are done using ResNet50. We
-provide support for the entire family of ResNet and DenseNet as well as 
-BN-Inception.
+provide support for the entire family of ResNet and DenseNet as well as BN-Inception.
 
 # Set up
 
@@ -25,43 +24,40 @@ BN-Inception.
 
         cd intra_batch
 
-2. Create an Anaconda environment for this project:
-To set up a conda environment containing all used packages, please fist install anaconda or miniconda and then install the environment either using the environment.yaml or the requirements.txt file:
-   1.       conda env create -f env.yaml
-    2.      conda activate dml
-    3.      pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.8.0+cu102.html
-    4.      pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.8.0+cu102.html
-    5.      pip install torch-geometric
-    6. If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
+2. Create a Conda environment for this project:
+To set up a conda environment containing all used packages, please fist install anaconda or miniconda and then install the environment using the  requirements.txt file:
 
-    Or:
+   1.      conda create -n intra_batch_dml python=3.7
+   2.      conda activate intra_batch_dml
+   3.      pip install torch==1.10.0+cu111 torchvision==0.11.1+cu111 torchaudio==0.10.0+cu111 -f https://download.pytorch.org/whl/cu111/torch_stable.html
+   4.      pip install -r requirements.txt
+   5.  (Optional) If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
 
-   1.      conda create -n dml python=3.6
-   2.      conda activate dml
-   3.      pip install -r requirements.txt
-   4.      pip install torch-scatter -f https://pytorch-geometric.com/whl/torch-1.8.0+cu102.html
-   5.      pip install torch-sparse -f https://pytorch-geometric.com/whl/torch-1.8.0+cu102.html
-   6.      pip install torch-geometric
-   7.  (Optional) Install Apex
+        If you use Google Cloud Platform use the Python only version
 
-            git clone https://github.com/NVIDIA/apex
-            cd apex
-        General:
-
-            pip install -v --disable-pip-version-check --no-cache-dir --global-option="--cpp_ext" --global-option="--cuda_ext" ./
-        Python only:
+3. If you want to use Google Cloud Platform:
+   1.   Create a Deep Learning VM (recommended: Tesla K80, Ubuntu 20.04 with Pytorch 1.10 and Cuda 11.1 preinstalled)
+   2.   Install Nvidia Driver
+         prompted when connected via SSH (may not work at first, if so please run "sudo dpkg --configure -a" and re-login in shell and try again)
+   3.   Use installations instruction from above
+   4.   If you want to use Apex, use the python only installation:
 
             pip install -v --disable-pip-version-check --no-cache-dir ./
-        Restart Environment?
 
-3. Download datasets:
+4. Download datasets:
 Make a data directory by typing 
 
         mkdir data
     Then download the datasets using the following links and unzip them in the data directory:
     * CUB-200-2011: http://www.vision.caltech.edu/visipedia/CUB-200-2011.html
+        ```bash
+        wget https://vision.in.tum.de/webshare/u/seidensc/intra_batch_connections/CARS.zip
+        ```
     * Cars196: https://vision.in.tum.de/webshare/u/seidensc/intra_batch_connections/CARS.zip
     * Stanford Online Products: https://cvgl.stanford.edu/projects/lifted_struct/
+        ```bash
+        wget ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip
+        ```
     * In-Shop: http://mmlab.ie.cuhk.edu.hk/projects/DeepFashion/InShopRetrieval.html
 
     We also provide a parser for Stanford Online Products and In-Shop datastes. You can find dem in the `dataset/` directory. The datasets are expected to be structured as 

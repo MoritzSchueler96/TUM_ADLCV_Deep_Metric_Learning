@@ -82,6 +82,10 @@ class Trainer():
         print("*" * 55, "Versions", "*" * 55)
         print("Torch version: ", torch.__version__)
         print("Torch Cuda version: ", torch.version.cuda)
+        print("Cuda available: ", torch.cuda.is_available())
+        devices = [d for d in range(torch.cuda.device_count())]
+        for d in devices:
+            print("Using Cuda Device: ", d, "Name: ", torch.cuda.get_device_name(d))
         import torch_scatter
         print("Torch Scatter version: ", torch_scatter.__version__)
         print("Torch file: ", torch.__file__)
