@@ -130,3 +130,6 @@ dmypy.json
 data/
 *.zip
 best_weights/
+results/
+results_nets/
+storage/
