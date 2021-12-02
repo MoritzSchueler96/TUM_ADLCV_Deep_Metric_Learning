@@ -258,6 +258,7 @@ class GATNetwork(nn.Module):
                     concat=False,
                     dropout=params["dropout_gat"],
                     add_self_loops=False,
+                    edge_dim=1,
                 )
                 for _ in range(num_layers)
             ]
