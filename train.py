@@ -1,6 +1,8 @@
 import yaml
-import argparse
 import torch
+import argparse
+import random
+import numpy as np
 import logging
 import warnings
 import time
@@ -21,10 +23,20 @@ logger.addHandler(ch)
 
 warnings.filterwarnings("ignore")
 
+# set seed etc to get deterministic behavior
+torch.manual_seed(0)
+random.seed(0)
+np.random.seed(0)
+rng = np.random.default_rng(0)
+torch.backends.cudnn.benchmark = False
+torch.backends.cudnn.deterministic = True
+
+# torch.use_deterministic_algorithms(True) # can't be used because scatter has no deterministic implementation
+# set env variable to CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 def init_args():
     parser = argparse.ArgumentParser(description='Person Re-ID with GNN')
-    parser.add_argument('--config_path', type=str, default='config/config_cars_train.yaml', help='Path to config file')
+    parser.add_argument('--config_path', type=str, default='config/config_cars_train_gat.yaml', help='Path to config file')
     parser.add_argument('--dataset_path', type=str, default='from_yaml', help='Give path to dataset, else path from yaml file will be taken')
     parser.add_argument('--bb_path', type=str, default='from_yaml', help='Give path to bb weight, else path from yaml file will be taken')
     parser.add_argument('--gnn_path', type=str, default='from_yaml', help='Give path to gnn weight, else path from yaml file will be taken')
