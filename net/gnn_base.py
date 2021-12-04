@@ -158,7 +158,7 @@ class GNNReID(nn.Module):
         elif output_option == "neck" and self.neck:
             return x, features
         elif output_option == "neck" and not self.neck:
-            print("Output option neck only avaiable if bottleneck (neck) is " "enabeled - giving back x and fc7")
+            print("Output option neck only avaiable if bottleneck (neck) is " "enabled - giving back x and fc7")
             return x, feats
 
         return x, feats
@@ -236,38 +236,88 @@ class DotAttentionLayer(nn.Module):
 class GATNetwork(nn.Module):
     def __init__(self, embed_dim, params, num_layers):
         super(GATNetwork, self).__init__()
+        self.res1 = params["res1"]
+        self.res2 = params["res2"]
+
+        layers = list()
+        lin_layers = list()
+
         if params["gat"] == 1:
-            layers = [
-                GATConv(
-                    in_channels=embed_dim,
-                    out_channels=embed_dim,
-                    heads=params["num_heads"],
-                    concat=False,
-                    dropout=params["dropout_gat"],
-                    add_self_loops=False,
-                    edge_dim=1,
-                )
-                for _ in range(num_layers)
-            ]
+            for _ in range(num_layers):
+                layers.append(
+                    GATConv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                    ))
+                lin_layers.append(LinearLayer(embed_dim, params))
+
         elif params["gat"] == 2:
-            layers = [
-                GATv2Conv(
-                    in_channels=embed_dim,
-                    out_channels=embed_dim,
-                    heads=params["num_heads"],
-                    concat=False,
-                    dropout=params["dropout_gat"],
-                    add_self_loops=False,
-                    edge_dim=1,
-                )
-                for _ in range(num_layers)
-            ]
+            for _ in range(num_layers):
+                layers.append(
+                    GATv2Conv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                    ))
+                lin_layers.append(LinearLayer(embed_dim, params))
 
         self.layers = Sequential(*layers)
+        self.lin_layers = Sequential(*lin_layers)
 
     def forward(self, feats, edge_index, edge_attr):
         out = list()
-        for layer in self.layers:
+        for layer, lin_layer in zip(self.layers, self.lin_layers):
             feats = layer(feats, edge_index, edge_attr)
+            feats, _, _ = lin_layer(feats, edge_index, edge_attr)
             out.append(feats)
         return out
+
+
+class LinearLayer(nn.Module):
+    def __init__(self, embed_dim, params, d_hid=None):
+        super(LinearLayer, self).__init__()
+        self.res1 = params["res1"]
+        self.res2 = params["res2"]
+
+        d_hid = 4 * embed_dim if d_hid is None else d_hid
+        self.mlp = params["mlp"]
+
+        self.linear1 = nn.Linear(embed_dim, d_hid) if params["mlp"] else None
+        self.dropout = nn.Dropout(params["dropout_mlp"])
+        self.linear2 = nn.Linear(d_hid, embed_dim) if params["mlp"] else None
+
+        self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
+        self.norm2 = LayerNorm(embed_dim) if params["norm2"] else None
+        self.dropout1 = nn.Dropout(params["dropout_1"])
+        self.dropout2 = nn.Dropout(params["dropout_2"])
+
+        self.act = F.relu
+
+
+    def forward(self, feats, edge_index, edge_attr):
+        # if gradient checkpointing should be apllied for the gnn, comment line above and uncomment line below
+        # feats2 = checkpoint.checkpoint(self.custom(), feats, edge_index, edge_attr, preserve_rng_state=True)
+
+        feats2 = self.dropout1(feats)
+        feats = feats + feats2 if self.res1 else feats2
+        feats = self.norm1(feats) if self.norm1 is not None else feats
+
+        if self.mlp:
+            feats2 = self.linear2(self.dropout(self.act(self.linear1(feats))))
+        else:
+            feats2 = feats
+
+        feats2 = self.dropout2(feats2)
+        feats = feats + feats2 if self.res2 else feats2
+        feats = self.norm2(feats) if self.norm2 is not None else feats
+
+        return feats, edge_index, edge_attr
