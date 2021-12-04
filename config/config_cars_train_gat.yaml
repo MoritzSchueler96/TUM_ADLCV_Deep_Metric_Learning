@@ -1,4 +1,4 @@
-mode: "train" #train/test/hyper_search/pretraining
+mode: "train_hyper" #train/test/hyper_search/pretraining
 application: "DML"
 output_path: "."
 
@@ -63,7 +63,7 @@ train_params:
   lr: 0.000367
   weight_decay: 2.5e-09
   num_epochs: 70
-  is_apex: 0
+  is_apex: 1
   temperatur: 0.1111111111111 
   output_train_enc: "plain"
   output_train_gnn: "plain"
