@@ -67,6 +67,7 @@ class Trainer():
         self.save_folder_results = save_folder_results
         self.save_folder_nets = save_folder_nets + "_intermediate"
         utils.make_dir(save_folder_nets)
+        utils.make_dir(self.save_folder_nets)
         self.save_folder_nets_final = save_folder_nets
 
         self.timer = timer
