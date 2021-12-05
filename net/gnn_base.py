@@ -103,19 +103,16 @@ class GNNReID(nn.Module):
             self.fc = Sequential(*layers)
 
     def _build_GNN_Net(self, embed_dim: int = 2048):
-        if self.gat:
-            gnn_model = GATNetwork(embed_dim, self.gnn_params, self.gnn_params["num_layers"])
-        else:
-            # init aggregator
-            if self.gnn_params["aggregator"] == "add":
-                self.aggr = lambda out, row, dim, x_size: scatter_add(out, row, dim=dim, dim_size=x_size)
-            if self.gnn_params["aggregator"] == "mean":
-                self.aggr = lambda out, row, dim, x_size: scatter_mean(out, row, dim=dim, dim_size=x_size)
-            if self.gnn_params["aggregator"] == "max":
-                self.aggr = lambda out, row, dim, x_size: scatter_max(out, row, dim=dim, dim_size=x_size)
+        # init aggregator
+        if self.gnn_params["aggregator"] == "add":
+            self.aggr = lambda out, row, dim, x_size: scatter_add(out, row, dim=dim, dim_size=x_size)
+        if self.gnn_params["aggregator"] == "mean":
+            self.aggr = lambda out, row, dim, x_size: scatter_mean(out, row, dim=dim, dim_size=x_size)
+        if self.gnn_params["aggregator"] == "max":
+            self.aggr = lambda out, row, dim, x_size: scatter_max(out, row, dim=dim, dim_size=x_size)
 
-            gnn = GNNNetwork(embed_dim, self.aggr, self.dev, self.gnn_params, self.gnn_params["num_layers"])
-            gnn_model = MetaLayer(node_model=gnn)
+        gnn = GNNNetwork(embed_dim, self.aggr, self.dev, self.gnn_params, self.gnn_params["num_layers"])
+        gnn_model = MetaLayer(node_model=gnn)
 
         return gnn_model
 
@@ -127,7 +124,7 @@ class GNNReID(nn.Module):
 
         if self.gat:
             edge_index = edge_index.t()
-            feats = self.gnn_model(feats, edge_index, edge_attr)
+            feats, _, _ = self.gnn_model(feats, edge_index, edge_attr)
         else:
             feats, _, _ = self.gnn_model(feats, edge_index, edge_attr)
 
@@ -186,24 +183,45 @@ class DotAttentionLayer(nn.Module):
         num_heads = params["num_heads"]
         self.res1 = params["res1"]
         self.res2 = params["res2"]
-
-        self.att = MultiHeadDotProduct(embed_dim, num_heads, aggr, mult_attr=params["mult_attr"]).to(dev)
+        self.gat = "gat" in params
+        self.use_att = "no_att" not in params
+        if self.use_att:
+            if self.gat:
+                if params["gat"] == 1:
+                    self.att = GATConv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                    )
+                elif params["gat"] == 2:
+                    self.att = GATv2Conv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                    )
+            else:
+                self.att = MultiHeadDotProduct(embed_dim, num_heads, aggr, mult_attr=params["mult_attr"]).to(dev)
+            self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
+            self.dropout1 = nn.Dropout(params["dropout_1"])
 
         d_hid = 4 * embed_dim if d_hid is None else d_hid
-        self.mlp = params["mlp"]
-
-        self.linear1 = nn.Linear(embed_dim, d_hid) if params["mlp"] else None
-        self.dropout = nn.Dropout(params["dropout_mlp"])
-        self.linear2 = nn.Linear(d_hid, embed_dim) if params["mlp"] else None
-
-        self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
-        self.norm2 = LayerNorm(embed_dim) if params["norm2"] else None
-        self.dropout1 = nn.Dropout(params["dropout_1"])
-        self.dropout2 = nn.Dropout(params["dropout_2"])
+        self.mlp = "mlp" in params
+        if self.mlp:
+            self.linear1 = nn.Linear(embed_dim, d_hid)
+            self.dropout = nn.Dropout(params["dropout_mlp"])
+            self.linear2 = nn.Linear(d_hid, embed_dim)
+            self.norm2 = LayerNorm(embed_dim) if params["norm2"] else None
+            self.dropout2 = nn.Dropout(params["dropout_2"])
 
         self.act = F.relu
-
-        self.dummy_tensor = torch.ones(1, requires_grad=True)
 
     def custom(self):
         def custom_forward(*inputs):
@@ -213,61 +231,18 @@ class DotAttentionLayer(nn.Module):
         return custom_forward
 
     def forward(self, feats, edge_index, edge_attr):
-        feats2 = self.att(feats, edge_index, edge_attr)
-        # if gradient checkpointing should be apllied for the gnn, comment line above and uncomment line below
-        # feats2 = checkpoint.checkpoint(self.custom(), feats, edge_index, edge_attr, preserve_rng_state=True)
-
-        feats2 = self.dropout1(feats2)
-        feats = feats + feats2 if self.res1 else feats2
-        feats = self.norm1(feats) if self.norm1 is not None else feats
+        if self.use_att:
+            feats2 = self.att(feats, edge_index, edge_attr)
+            # if gradient checkpointing should be apllied for the gnn, comment line above and uncomment line below
+            # feats2 = checkpoint.checkpoint(self.custom(), feats, edge_index, edge_attr, preserve_rng_state=True)
+            feats2 = self.dropout1(feats2)
+            feats = feats + feats2 if self.res1 else feats2
+            feats = self.norm1(feats) if self.norm1 is not None else feats
 
         if self.mlp:
             feats2 = self.linear2(self.dropout(self.act(self.linear1(feats))))
-        else:
-            feats2 = feats
-
-        feats2 = self.dropout2(feats2)
-        feats = feats + feats2 if self.res2 else feats2
-        feats = self.norm2(feats) if self.norm2 is not None else feats
+            feats2 = self.dropout2(feats2)
+            feats = feats + feats2 if self.res2 else feats2
+            feats = self.norm2(feats) if self.norm2 is not None else feats
 
         return feats, edge_index, edge_attr
-
-
-class GATNetwork(nn.Module):
-    def __init__(self, embed_dim, params, num_layers):
-        super(GATNetwork, self).__init__()
-        if params["gat"] == 1:
-            layers = [
-                GATConv(
-                    in_channels=embed_dim,
-                    out_channels=embed_dim,
-                    heads=params["num_heads"],
-                    concat=False,
-                    dropout=params["dropout_gat"],
-                    add_self_loops=False,
-                    edge_dim=1,
-                )
-                for _ in range(num_layers)
-            ]
-        elif params["gat"] == 2:
-            layers = [
-                GATv2Conv(
-                    in_channels=embed_dim,
-                    out_channels=embed_dim,
-                    heads=params["num_heads"],
-                    concat=False,
-                    dropout=params["dropout_gat"],
-                    add_self_loops=False,
-                    edge_dim=1,
-                )
-                for _ in range(num_layers)
-            ]
-
-        self.layers = Sequential(*layers)
-
-    def forward(self, feats, edge_index, edge_attr):
-        out = list()
-        for layer in self.layers:
-            feats = layer(feats, edge_index, edge_attr)
-            out.append(feats)
-        return out
