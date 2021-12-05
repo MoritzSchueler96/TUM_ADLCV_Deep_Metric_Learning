@@ -49,11 +49,11 @@ Make a data directory by typing
 
         mkdir data
     Then download the datasets using the following links and unzip them in the data directory:
-    * CUB-200-2011: http://www.vision.caltech.edu/visipedia/CUB-200-2011.html
+    * Cars196: https://vision.in.tum.de/webshare/u/seidensc/intra_batch_connections/CARS.zip
         ```bash
         wget https://vision.in.tum.de/webshare/u/seidensc/intra_batch_connections/CARS.zip
         ```
-    * Cars196: https://vision.in.tum.de/webshare/u/seidensc/intra_batch_connections/CARS.zip
+    * CUB-200-2011: http://www.vision.caltech.edu/visipedia/CUB-200-2011.html
     * Stanford Online Products: https://cvgl.stanford.edu/projects/lifted_struct/
         ```bash
         wget ftp://cs.stanford.edu/cs/cvgl/Stanford_Online_Products.zip
@@ -86,7 +86,7 @@ To test to networks choose one of the config files for testing, e.g., `config_ca
 
 In example:
 
-    python train.py --config_path config/config_cars_test.yaml --dataset_path /data/CARS
+    python train.py --config_path config/config_cars_test.yaml --dataset_path data/CARS
 
 The default dataset path is data.
 
