@@ -26,7 +26,7 @@ a two-layer GAT on Cora dataset.
 """
 
 
-class GraphAttentionLayer(nn.parallelModule):
+class GraphAttentionLayer(nn.Module):
     """
     ## Graph attention layer
     This is a single graph attention layer.
