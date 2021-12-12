@@ -1,10 +1,10 @@
-mode: "test" 
+mode: "train" #train/test/hyper_search/pretraining
 application: "DML"
 output_path: "."
 
 models:
   encoder_params:
-    pretrained_path: "no" # "best_weights/somepathresnet50_cars.pth"
+    pretrained_path: "no" 
     net_type: "resnet50"
     neck: 0
     last_stride: 0
@@ -19,7 +19,7 @@ models:
     cat: 1
     every: 0
     gnn:
-      num_layers: 2 
+      num_layers: 2
       aggregator: "add"
       num_heads: 8
       attention: "dot" 
@@ -32,7 +32,7 @@ models:
       dropout_1: 0.1
       dropout_2: 0.1
       mult_attr: 0
-      gat: 1
+      gat: 4
       dropout_gat: 0.1
     classifier:
       neck: 1
@@ -53,18 +53,18 @@ dataset:
   number_aug: 2
   magnitude: 27
   sampling: "no"
-  bssampling: "no" #"NumerSampler"
+  bssampling: "no" #"NumberSampler"
   val: 0
   nb_workers: 4
 
 train_params:
-  num_classes_iter: 10
+  num_classes_iter: 10 
   num_elements_class: 7 
   lr: 0.000367
   weight_decay: 2.5e-09
   num_epochs: 70
   is_apex: 0
-  temperatur: 0.1111111111111
+  temperatur: 0.1111111111111 
   output_train_enc: "plain"
   output_train_gnn: "plain"
   loss_fn:
@@ -78,9 +78,9 @@ train_params:
     scaling_of_pre: 1
     scaling_distill: 1
     soft_temp: 10
-    preds: "no"
-    feats: "no"
-
+    preds: "no" 
+    feats: "no" 
+    
 eval_params:
   output_test_enc: "plain"
   output_test_gnn: "plain"
