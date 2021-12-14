@@ -32,12 +32,13 @@ torch.cuda.manual_seed_all(0)
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = True
 
-# torch.use_deterministic_algorithms(True) # can't be used because scatter has no deterministic implementation
-# set env variable to CUBLAS_WORKSPACE_CONFIG=:4096:8
+torch.use_deterministic_algorithms(True) # can't be used because scatter has no deterministic implementation
+# set env variable to CUBLAS_WORKSPACE_CONFIG=:4096:8 or CUBLAS_WORKSPACE_CONFIG=:16:8
+# export CUBLAS_WORKSPACE_CONFIG=:4096:8
 
 def init_args():
     parser = argparse.ArgumentParser(description='Person Re-ID with GNN')
-    parser.add_argument('--config_path', type=str, default='config/config_cars_train_gat.yaml', help='Path to config file')
+    parser.add_argument('--config_path', type=str, default='config/config_cars_train_gat3.yaml', help='Path to config file')
     parser.add_argument('--dataset_path', type=str, default='from_yaml', help='Give path to dataset, else path from yaml file will be taken')
     parser.add_argument('--bb_path', type=str, default='from_yaml', help='Give path to bb weight, else path from yaml file will be taken')
     parser.add_argument('--gnn_path', type=str, default='from_yaml', help='Give path to gnn weight, else path from yaml file will be taken')
