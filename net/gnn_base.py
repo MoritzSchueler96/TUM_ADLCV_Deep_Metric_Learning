@@ -153,7 +153,7 @@ class GraphAttentionLayer(nn.Module):
         a = self.dropout(a)
 
         # Calculate final output for each head
-        attn_res = torch.einsum("ijh,jhf->ihf", a, g)
+        attn_res = torch.einsum("ijh,jhf->ihf", a, g.type(torch.float32))
 
         # Concatenate the heads
         if self.is_concat:
