@@ -144,7 +144,7 @@ class GraphAttentionLayer(nn.Module):
         assert adj_mat.shape[1] == 1 or adj_mat.shape[1] == n_nodes
         assert adj_mat.shape[2] == 1 or adj_mat.shape[2] == self.n_heads
         # Mask $e_{ij}$ based on adjacency matrix.
-        e = e.masked_fill(adj_mat == 0, float("-inf"))
+        e = e.masked_fill(adj_mat.to("cuda") == 0, float("-inf"))
 
         # We then normalize attention scores (or coefficients)
         a = self.softmax(e)
@@ -393,7 +393,7 @@ class GATv2(nn.Module):
         return self.output(x, adj_mat)
 
 class GNNReID(nn.Module):
-    def __init__(self, dev, params: dict = None, embed_dim: int = 2048):
+    def __init__(self, dev, n_nodes: int = 70, params: dict = None, embed_dim: int = 2048):
         super(GNNReID, self).__init__()
         num_classes = params["classifier"]["num_classes"]
         self.dev = dev
@@ -406,7 +406,8 @@ class GNNReID(nn.Module):
         embed_dim = int(embed_dim / params["red"])
         logger.info("Embed dim new {}".format(embed_dim))
 
-        self.gnn_model = self._build_GNN_Net(embed_dim=embed_dim)
+        self.adj_mat = torch.ones((n_nodes, n_nodes, 1))
+        self.gnn_model = self._build_GNN_Net(self.adj_mat, embed_dim=embed_dim)
 
         # classifier
         self.neck = params["classifier"]["neck"]
@@ -438,9 +439,9 @@ class GNNReID(nn.Module):
             )
             self.fc = Sequential(*layers)
 
-    def _build_GNN_Net(self, embed_dim: int = 2048):
+    def _build_GNN_Net(self, adj_mat: torch.tensor, embed_dim: int = 2048):
         if self.gat:
-            gnn_model = GATNetwork(embed_dim, self.gnn_params, self.gnn_params["num_layers"])
+            gnn_model = GATNetwork(adj_mat, embed_dim, self.gnn_params, self.gnn_params["num_layers"])
         else:
             # init aggregator
             if self.gnn_params["aggregator"] == "add":
@@ -455,7 +456,7 @@ class GNNReID(nn.Module):
 
         return gnn_model
 
-    def forward(self, feats, edge_index, edge_attr=None, output_option="norm"):
+    def forward(self, feats, adj_mat, edge_index, edge_attr=None, output_option="norm"):
         r, c = edge_index[:, 0], edge_index[:, 1]
 
         if self.dim_red is not None:
@@ -463,7 +464,7 @@ class GNNReID(nn.Module):
 
         if self.gat:
             edge_index = edge_index.t()
-            feats = self.gnn_model(feats, edge_index, edge_attr)
+            feats = self.gnn_model(feats, adj_mat, edge_index, edge_attr)
         else:
             feats, _, _ = self.gnn_model(feats, edge_index, edge_attr)
 
@@ -570,10 +571,12 @@ class DotAttentionLayer(nn.Module):
 
 
 class GATNetwork(nn.Module):
-    def __init__(self, embed_dim, params, num_layers):
+    def __init__(self, adj_mat, embed_dim, params, num_layers):
         super(GATNetwork, self).__init__()
         self.res1 = params["res1"]
         self.res2 = params["res2"]
+
+        self.adj_mat = adj_mat
 
         layers = list()
         lin_layers = list()
@@ -633,10 +636,10 @@ class GATNetwork(nn.Module):
         self.layers = Sequential(*layers)
         self.lin_layers = Sequential(*lin_layers)
 
-    def forward(self, feats, edge_index, edge_attr):
+    def forward(self, feats, adj_mat, edge_index, edge_attr):
         out = list()
         for layer, lin_layer in zip(self.layers, self.lin_layers):
-            feats = layer(feats, edge_index, edge_attr)
+            feats = layer(feats, adj_mat)
             feats, _, _ = lin_layer(feats, edge_index, edge_attr)
             out.append(feats)
         return out
