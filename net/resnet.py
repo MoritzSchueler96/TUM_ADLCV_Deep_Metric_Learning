@@ -179,7 +179,8 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, layers[3], stride=last,
                                        dilate=replace_stride_with_dilation[2])
         
-        self.avgpool = nn.AdaptiveMaxPool2d((1, 1))
+        # self.avgpool = nn.AdaptiveMaxPool2d((1, 1))
+        self.avgpool = nn.MaxPool2d((8,8)) 
         
         if red == 1:
             self.red = None
