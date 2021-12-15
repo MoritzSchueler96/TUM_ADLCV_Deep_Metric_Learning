@@ -309,7 +309,7 @@ class GraphAttentionV2Layer(nn.Module):
         assert adj_mat.shape[1] == 1 or adj_mat.shape[1] == n_nodes
         assert adj_mat.shape[2] == 1 or adj_mat.shape[2] == self.n_heads
         # Mask $e_{ij}$ based on adjacency matrix.
-        e = e.masked_fill(adj_mat == 0, float("-inf"))
+        e = e.masked_fill(adj_mat.to("cuda") == 0, float("-inf"))
 
         # We then normalize attention scores (or coefficients)
         a = self.softmax(e)
@@ -318,7 +318,7 @@ class GraphAttentionV2Layer(nn.Module):
         a = self.dropout(a)
 
         # Calculate final output for each head
-        attn_res = torch.einsum("ijh,jhf->ihf", a, g_r)
+        attn_res = torch.einsum("ijh,jhf->ihf", a, g_r.type(torch.float32))
 
         # Concatenate the heads
         if self.is_concat:
