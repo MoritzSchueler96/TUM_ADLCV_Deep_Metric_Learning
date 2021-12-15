@@ -96,6 +96,7 @@ class Trainer:
 
             # Do training in mixed precision
             if self.config["train_params"]["is_apex"]:
+                print("Using apex")
                 global amp
                 from apex import amp
 
@@ -116,8 +117,7 @@ class Trainer:
                 os.rename(
                     osp.join(self.save_folder_nets, self.fn + ".pth"),
                     osp.join(
-                        self.save_folder_nets_final,
-                        str(best_recall_iter) + mode + self.net_type + "_" + self.dataset_short + ".pth",
+                        self.save_folder_nets_final, str(best_recall_iter) + mode + self.net_type + "_" + self.dataset_short + ".pth",
                     ),
                 )
                 os.rename(
@@ -227,10 +227,7 @@ class Trainer:
 
         if self.gnn_loss:
             if self.every:
-                loss1 = [
-                    gnn_loss(pr / self.config["train_params"]["temperatur"], Y)
-                    for gnn_loss, pr in zip(self.gnn_loss, pred)
-                ]
+                loss1 = [gnn_loss(pr / self.config["train_params"]["temperatur"], Y) for gnn_loss, pr in zip(self.gnn_loss, pred)]
             else:
                 loss1 = [self.gnn_loss(pred[-1] / self.config["train_params"]["temperatur"], Y)]
             lo = [train_params["loss_fn"]["scaling_gnn"] * l for l in loss1]
@@ -288,7 +285,7 @@ class Trainer:
             with torch.no_grad():
                 logger.info("EVALUATION")
                 if self.config["mode"] == "train" or self.config["mode"] == "test":
-                    mAP, top = self.evaluator.evaluate(
+                    nmi, top = self.evaluator.evaluate(
                         self.encoder,
                         self.dl_ev,
                         self.gallery_dl,
@@ -297,7 +294,7 @@ class Trainer:
                         nb_classes=self.config["dataset"]["num_classes"],
                     )
                 else:  # all other modes that involve gnn during test time
-                    mAP, top = self.evaluator.evaluate(
+                    nmi, top = self.evaluator.evaluate(
                         self.encoder,
                         self.dl_ev,
                         self.gallery_dl,
@@ -309,7 +306,7 @@ class Trainer:
                         nb_classes=self.config["dataset"]["num_classes"],
                     )
 
-                scores.append((mAP, top))
+                scores.append((nmi, top))
                 recall = top[0]
 
                 self.encoder.current_epoch = e
@@ -332,9 +329,7 @@ class Trainer:
         return best_recall_iter
 
     def save_results(self, train_params, since, end, best_recall_iter, scores):
-        logger.info(
-            "Completed {} epochs in {}s on {}".format(train_params["num_epochs"], end - since, self.dataset_short)
-        )
+        logger.info("Completed {} epochs in {}s on {}".format(train_params["num_epochs"], end - since, self.dataset_short))
 
         file_name = str(best_recall_iter) + "_" + self.dataset_short + "_" + str(self.timer)
         if "test" in self.config["mode"].split("_"):
@@ -397,9 +392,7 @@ class Trainer:
             if "gnn" in params["fns"].split("_"):
                 self.gnn_loss = nn.CrossEntropyLoss().to(self.device)
             elif "lsgnn" in params["fns"].split("_"):
-                self.gnn_loss = losses.CrossEntropyLabelSmooth(num_classes=num_classes, dev=self.device).to(
-                    self.device
-                )
+                self.gnn_loss = losses.CrossEntropyLabelSmooth(num_classes=num_classes, dev=self.device).to(self.device)
             elif "focalgnn" in params["fns"].split("_"):
                 self.gnn_loss = losses.FocalLoss().to(self.device)
             else:
@@ -408,8 +401,7 @@ class Trainer:
         else:  # GNN loss after every layer
             if "gnn" in params["fns"].split("_"):
                 self.gnn_loss = [
-                    nn.CrossEntropyLoss().to(self.device)
-                    for _ in range(self.config["models"]["gnn_params"]["gnn"]["num_layers"])
+                    nn.CrossEntropyLoss().to(self.device) for _ in range(self.config["models"]["gnn_params"]["gnn"]["num_layers"])
                 ]
             elif "lsgnn" in params["fns"].split("_"):
                 self.gnn_loss = [
@@ -451,16 +443,12 @@ class Trainer:
             self.distill = losses.CrossEntropyDistill().to(self.device)
             with open(params["preds"], "r") as f:
                 self.soft_targets = json.load(f)
-            self.soft_targets = {
-                k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()
-            }
+            self.soft_targets = {k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()}
         elif "distillKL" in params["fns"].split("_"):
             self.distill = losses.KLDivWithLogSM().to(self.device)
             with open(params["preds"], "r") as f:
                 self.soft_targets = json.load(f)
-            self.soft_targets = {
-                k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()
-            }
+            self.soft_targets = {k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()}
         else:
             self.distill = None
 

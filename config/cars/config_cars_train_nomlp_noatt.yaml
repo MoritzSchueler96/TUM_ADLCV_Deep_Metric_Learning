@@ -5,7 +5,7 @@ output_paht: "."
 models:
   encoder_params:
     pretrained_path: "no" 
-    net_type: "resnet50" 
+    net_type: "resnet50"
     neck: 0
     last_stride: 0
     red: 4
@@ -16,25 +16,26 @@ models:
   gnn_params:
     pretrained_path: "no" 
     red: 1
-    cat: 0
+    cat: 1
     every: 0
     gnn:
-      num_layers: 1 
+      num_layers: 2 
       aggregator: "add"
-      num_heads: 2 
-      attention: "dot" 
+      num_heads: 8 
+      attention: "no"
       mlp: 1
       dropout_mlp: 0.1
       norm1: 1
-      norm2: 1 
+      norm2: 1
       res1: 1
       res2: 1
       dropout_1: 0.1
       dropout_2: 0.1
       mult_attr: 0
+      no_att: 1
     classifier:
       neck: 1
-      num_classes: 100
+      num_classes: 98
       dropout_p: 0.4
       use_batchnorm: 0
 
@@ -44,29 +45,29 @@ graph_params:
   set_negative: "hard"
 
 dataset:
-  dataset_path: "data/CUB_200_2011"
-  dataset_short: "cub"
-  num_classes: 100
+  dataset_path: "data/CARS"
+  dataset_short: "cars"
+  num_classes: 98
+  trans: "GL_orig_RE"
   number_aug: 2
   magnitude: 27
-  trans: "GL_orig_RE"
   sampling: "no"
-  bssampling: "NumberSampler"
+  bssampling: "no" #"NumberSampler"
   val: 0
   nb_workers: 4
 
 train_params:
-  num_classes_iter: 6 
-  num_elements_class: 9 
-  lr: 0.0001563663718906821 
-  weight_decay: 6.059722614369727e-06 
+  num_classes_iter: 10 
+  num_elements_class: 7 
+  lr: 0.00036683239911604993 
+  weight_decay: 2.551918610962277e-09 
   num_epochs: 70
   is_apex: 0
-  temperatur: 0.2 
+  temperatur: 0.1111111111111 
   output_train_enc: "plain"
   output_train_gnn: "plain"
   loss_fn:
-    fns: "lsgnn_lsce" #ce/focalce can be used instead of lsce and lsgnn/focalgnn instead of gnn, rest can be added by ce_gnn_center...
+    fns: "lsce_lsgnn" #ce/focalce can be used instead of lsce and lsgnn/focalgnn instead of gnn, rest can be added by ce_gnn_center...
     scaling_ce: 1
     scaling_gnn: 1
     scaling_distance: 0.01
@@ -75,20 +76,11 @@ train_params:
     scaling_of: 1
     scaling_of_pre: 1
     scaling_distill: 1
-    soft_temp: 1
-    feats: "no" 
+    soft_temp: 10
     preds: "no" 
-
+    feats: "no" 
+    
 eval_params:
-  cat: 0
   output_test_enc: "plain"
   output_test_gnn: "plain"
-  
-  
-
-
-
-
-
-
-
+  cat: 0

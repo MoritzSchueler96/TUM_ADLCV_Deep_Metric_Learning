@@ -22,7 +22,7 @@ models:
       num_layers: 2
       aggregator: "add"
       num_heads: 8
-      attention: "dot" 
+      attention: "gat2" 
       mlp: 1
       dropout_mlp: 0.1
       norm1: 1
@@ -32,7 +32,7 @@ models:
       dropout_1: 0.1
       dropout_2: 0.1
       mult_attr: 0
-      gat: 1
+      gat: 2
       dropout_gat: 0.1
     classifier:
       neck: 1
