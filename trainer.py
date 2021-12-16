@@ -2,7 +2,6 @@ import os.path as osp
 import logging
 import random
 import net
-import dataset
 from RAdam import RAdam
 from collections import defaultdict
 import torch.nn as nn
@@ -12,8 +11,6 @@ import random
 import data_utility
 import time
 import torch.nn.functional as F
-import copy
-import sys
 from evaluation import Evaluator_DML
 import utils.utils as utils
 import matplotlib.pyplot as plt
@@ -24,8 +21,6 @@ from torch import autograd
 autograd.set_detect_anomaly(True)
 
 logger = logging.getLogger("GNNReID.Training")
-
-torch.manual_seed(0)
 
 def config_types(config):
     print("*" * 53, "Config Types", "*" * 53)
