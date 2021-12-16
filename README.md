@@ -36,7 +36,8 @@ To set up a conda environment containing all used packages, please fist install 
         If you use Google Cloud Platform use the Python only version
 
 3. If you want to use Google Cloud Platform:
-   1.   Create a Deep Learning VM (recommended: Tesla K80, Ubuntu 20.04 with Pytorch 1.10 and Cuda 11.1 preinstalled)
+   1.   Create a Deep Learning VM 
+        (recommended: Tesla T4, 8core CPU with 10GB RAM, Ubuntu 20.04 with Pytorch 1.10 and Cuda 11.1 preinstalled and 100GB SSD storage -> costs ~1$/h, training time ~4h for 70 epochs)
    2.   Install Nvidia Driver
          prompted when connected via SSH (may not work at first, if so please run "sudo dpkg --configure -a" and re-login in shell and try again)
    3.   Use installations instruction from above

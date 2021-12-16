@@ -127,9 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-data/
-*.zip
+
 best_weights/
-results/
-results_nets/
+data/
+results_nets_intermediate/
+results_nets/*
+results/*
+*.zip
+apex/
 storage/
