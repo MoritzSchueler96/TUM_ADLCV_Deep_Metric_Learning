@@ -1,4 +1,4 @@
-mode: "train_hyper" #train/test/hyper_search/pretraining
+mode: "train" #train/test/hyper_search/pretraining
 application: "DML"
 output_path: "."
 

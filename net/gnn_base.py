@@ -30,7 +30,7 @@ class MetaLayer(torch.nn.Module):
             if hasattr(item, "reset_parameters"):
                 item.reset_parameters()
 
-    def forward(self, feats, edge_index, edge_attr=None):
+    def forward(self, feats, adj_mat, edge_index, edge_attr=None):
 
         r, c = edge_index[:, 0], edge_index[:, 1]
 
@@ -41,7 +41,7 @@ class MetaLayer(torch.nn.Module):
         if self.node_model is not None:
             feats, edge_index, edge_attr = self.node_model(feats, edge_index, edge_attr)
 
-        return feats, edge_index, edge_attr
+        return feats
 
     def __repr__(self):
         if self.edge_model:
@@ -66,6 +66,7 @@ class GraphAttentionLayer(nn.Module):
 
     def __init__(
         self,
+        dev,
         in_features: int,
         out_features: int,
         n_heads: int,
@@ -82,6 +83,7 @@ class GraphAttentionLayer(nn.Module):
         * `leaky_relu_negative_slope` is the negative slope for leaky relu activation
         """
         super().__init__()
+        self.dev = dev
 
         self.is_concat = is_concat
         self.n_heads = n_heads
@@ -140,7 +142,7 @@ class GraphAttentionLayer(nn.Module):
         assert adj_mat.shape[1] == 1 or adj_mat.shape[1] == n_nodes
         assert adj_mat.shape[2] == 1 or adj_mat.shape[2] == self.n_heads
         # Mask $e_{ij}$ based on adjacency matrix.
-        e = e.masked_fill(adj_mat.to("cuda") == 0, float("-inf"))
+        e = e.masked_fill(adj_mat.to(self.dev) == 0, float("-inf"))
 
         # We then normalize attention scores (or coefficients)
         a = self.softmax(e)
@@ -166,6 +168,7 @@ class GAT(nn.Module):
 
     def __init__(
         self,
+        dev,
         in_features: int,
         n_hidden: int,
         n_classes: int,
@@ -180,15 +183,16 @@ class GAT(nn.Module):
         * `dropout` is the dropout probability
         """
         super().__init__()
+        self.dev = dev
 
         # First graph attention layer where we concatenate the heads
-        self.layer1 = GraphAttentionLayer(
+        self.layer1 = GraphAttentionLayer(self.dev, 
             in_features, n_hidden, n_heads, is_concat=True, dropout=dropout
         )
         # Activation function after first graph attention layer
         self.activation = nn.ELU()
         # Final graph attention layer where we average the heads
-        self.output = GraphAttentionLayer(
+        self.output = GraphAttentionLayer(self.dev,
             n_hidden, n_classes, 1, is_concat=False, dropout=dropout
         )
         # Dropout
@@ -220,6 +224,7 @@ class GraphAttentionV2Layer(nn.Module):
 
     def __init__(
         self,
+        dev,
         in_features: int,
         out_features: int,
         n_heads: int,
@@ -238,6 +243,7 @@ class GraphAttentionV2Layer(nn.Module):
         * `share_weights` if set to `True`, the same matrix will be applied to the source and the target node of every edge
         """
         super().__init__()
+        self.dev = dev
 
         self.is_concat = is_concat
         self.n_heads = n_heads
@@ -305,7 +311,7 @@ class GraphAttentionV2Layer(nn.Module):
         assert adj_mat.shape[1] == 1 or adj_mat.shape[1] == n_nodes
         assert adj_mat.shape[2] == 1 or adj_mat.shape[2] == self.n_heads
         # Mask $e_{ij}$ based on adjacency matrix.
-        e = e.masked_fill(adj_mat.to("cuda") == 0, float("-inf"))
+        e = e.masked_fill(adj_mat.to(self.dev) == 0, float("-inf"))
 
         # We then normalize attention scores (or coefficients)
         a = self.softmax(e)
@@ -331,6 +337,7 @@ class GATv2(nn.Module):
 
     def __init__(
         self,
+        dev,
         in_features: int,
         n_hidden: int,
         n_classes: int,
@@ -347,9 +354,11 @@ class GATv2(nn.Module):
         * `share_weights` if set to True, the same matrix will be applied to the source and the target node of every edge
         """
         super().__init__()
+        self.dev = dev
 
         # First graph attention layer where we concatenate the heads
         self.layer1 = GraphAttentionV2Layer(
+            self.dev,
             in_features,
             n_hidden,
             n_heads,
@@ -361,6 +370,7 @@ class GATv2(nn.Module):
         self.activation = nn.ELU()
         # Final graph attention layer where we average the heads
         self.output = GraphAttentionV2Layer(
+            self.dev,
             n_hidden,
             n_classes,
             1,
@@ -437,7 +447,7 @@ class GNNReID(nn.Module):
 
     def _build_GNN_Net(self, adj_mat: torch.tensor, embed_dim: int = 2048):
         if self.gat:
-            gnn_model = GATNetwork(adj_mat, embed_dim, self.gnn_params, self.gnn_params["num_layers"])
+            gnn_model = GATNetwork(self.dev, adj_mat, embed_dim, self.gnn_params, self.gnn_params["num_layers"])
         else:
             # init aggregator
             if self.gnn_params["aggregator"] == "add":
@@ -447,7 +457,7 @@ class GNNReID(nn.Module):
             if self.gnn_params["aggregator"] == "max":
                 self.aggr = lambda out, row, dim, x_size: scatter_max(out, row, dim=dim, dim_size=x_size)
 
-            gnn = GNNNetwork(embed_dim, self.aggr, self.dev, self.gnn_params, self.gnn_params["num_layers"])
+            gnn = GNNNetwork(self.dev, embed_dim, self.aggr, self.gnn_params, self.gnn_params["num_layers"])
             gnn_model = MetaLayer(node_model=gnn)
 
         return gnn_model
@@ -458,7 +468,6 @@ class GNNReID(nn.Module):
         if self.dim_red is not None:
             feats = self.dim_red(feats)
 
-        edge_index = edge_index.t()
         feats = self.gnn_model(feats, adj_mat, edge_index, edge_attr)
         
         if self.params["cat"]:
@@ -495,24 +504,27 @@ class GNNReID(nn.Module):
 
 
 class GNNNetwork(nn.Module):
-    def __init__(self, embed_dim, aggr, dev, gnn_params, num_layers):
+    def __init__(self, dev, embed_dim, aggr, gnn_params, num_layers):
         super(GNNNetwork, self).__init__()
 
-        layers = [DotAttentionLayer(embed_dim, aggr, dev, gnn_params) for _ in range(num_layers)]
+        self.dev = dev
+        layers = [DotAttentionLayer(dev, embed_dim, aggr, gnn_params) for _ in range(num_layers)]
 
         self.layers = Sequential(*layers)
 
-    def forward(self, feats, adj_mat, edge_index, edge_attr):
+    def forward(self, feats, edge_index, edge_attr):
         out = list()
         for layer in self.layers:
             feats, edge_index, edge_attr = layer(feats, edge_index, edge_attr)
             out.append(feats)
-        return out
+        return out, edge_index, edge_attr
 
 
 class DotAttentionLayer(nn.Module):
-    def __init__(self, embed_dim, aggr, dev, params, d_hid=None):
+    def __init__(self, dev, embed_dim, aggr, params, d_hid=None):
         super(DotAttentionLayer, self).__init__()
+        self.dev = dev
+
         num_heads = params["num_heads"]
         self.res1 = params["res1"]
         self.res2 = params["res2"]
@@ -564,12 +576,14 @@ class DotAttentionLayer(nn.Module):
 
 
 class GATNetwork(nn.Module):
-    def __init__(self, adj_mat, embed_dim, params, num_layers):
+    def __init__(self, dev, adj_mat, embed_dim, params, num_layers):
         super(GATNetwork, self).__init__()
+
+        self.dev = dev
+        self.adj_mat = adj_mat
+
         self.res1 = params["res1"]
         self.res2 = params["res2"]
-
-        self.adj_mat = adj_mat
 
         layers = list()
         lin_layers = list()
@@ -578,6 +592,7 @@ class GATNetwork(nn.Module):
             for _ in range(num_layers):
                 layers.append(
                     GAT(
+                        dev=self.dev,
                         in_features=embed_dim,
                         n_hidden=embed_dim,
                         n_classes=embed_dim,
@@ -590,6 +605,7 @@ class GATNetwork(nn.Module):
             for _ in range(num_layers):
                 layers.append(
                     GATv2(
+                        dev=self.dev,
                         in_features=embed_dim,
                         n_hidden=embed_dim,
                         n_classes=embed_dim,
