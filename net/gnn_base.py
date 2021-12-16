@@ -198,7 +198,7 @@ class GAT(nn.Module):
         # Dropout
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor, adj_mat: torch.Tensor):
+    def forward(self, x: torch.Tensor, adj_mat: torch.Tensor, edge_index, edge_attr=None):
         """
         * `x` is the features vectors of shape `[n_nodes, in_features]`
         * `adj_mat` is the adjacency matrix of the form
@@ -375,7 +375,7 @@ class GATv2(nn.Module):
         # Dropout
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, x: torch.Tensor, adj_mat: torch.Tensor):
+    def forward(self, x: torch.Tensor, adj_mat: torch.Tensor, edge_index, edge_attr=None):
         """
         * `x` is the features vectors of shape `[n_nodes, in_features]`
         * `adj_mat` is the adjacency matrix of the form
@@ -639,8 +639,11 @@ class GATNetwork(nn.Module):
     def forward(self, feats, adj_mat, edge_index, edge_attr):
         out = list()
         for layer, lin_layer in zip(self.layers, self.lin_layers):
-            feats = layer(feats, adj_mat)
-            feats, _, _ = lin_layer(feats, edge_index, edge_attr)
+            try:
+                feats = layer(feats, adj_mat, edge_index, edge_attr)
+            except:
+                feats = layer(feats, edge_index, edge_attr)
+            feats = lin_layer(feats)
             out.append(feats)
         return out
 
@@ -666,7 +669,7 @@ class LinearLayer(nn.Module):
         self.act = F.relu
 
 
-    def forward(self, feats, edge_index, edge_attr):
+    def forward(self, feats):
         # if gradient checkpointing should be apllied for the gnn, comment line above and uncomment line below
         # feats2 = checkpoint.checkpoint(self.custom(), feats, edge_index, edge_attr, preserve_rng_state=True)
 
@@ -683,4 +686,4 @@ class LinearLayer(nn.Module):
         feats = feats + feats2 if self.res2 else feats2
         feats = self.norm2(feats) if self.norm2 is not None else feats
 
-        return feats, edge_index, edge_attr
+        return feats
