@@ -262,7 +262,7 @@ class Trainer():
         if self.gnn_loss or self.of:
             edge_attr, edge_index, fc7 = self.graph_generator.get_graph(fc7, Y)
             if type(loss) != int:
-                loss = loss.cuda(self.device)
+                loss = loss.to(self.device)
             pred, feats = self.gnn(fc7, self.gnn.adj_mat, edge_index, edge_attr, train_params["output_train_gnn"])
 
         # self.comp_list.append(self.comp(fc7, feats[-1]))
