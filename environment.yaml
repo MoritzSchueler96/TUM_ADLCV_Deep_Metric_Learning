@@ -1,4 +1,4 @@
-name: dml-gat
+name: dml-gat2
 channels:
   - pytorch
   - anaconda

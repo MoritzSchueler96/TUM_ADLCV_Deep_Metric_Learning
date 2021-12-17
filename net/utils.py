@@ -1,3 +1,4 @@
+from einops.einops import rearrange
 from torch import nn
 import torch
 from torch_scatter import scatter_max, scatter_add
@@ -5,7 +6,7 @@ import numpy as np
 import logging
 import math
 
-logger = logging.getLogger('GNNReID.Util')
+logger = logging.getLogger("GNNReID.Util")
 
 
 class Sequential(nn.Sequential):
@@ -42,7 +43,7 @@ class LinearFun(nn.Module):
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.linear.weight)
         if self.bias:
-            nn.init.constant_(self.linear.bias, 0.)
+            nn.init.constant_(self.linear.bias, 0.0)
 
     def forward(self, x):
         return self.linear(x)
@@ -62,8 +63,8 @@ class LayerNorm(nn.Module):
             self.weight = nn.Parameter(torch.Tensor(*self.norm_shape))
             self.bias = nn.Parameter(torch.Tensor(*self.norm_shape))
         else:
-            self.register_parameter('weight', None)
-            self.register_parameter('bias', None)
+            self.register_parameter("weight", None)
+            self.register_parameter("bias", None)
 
         self.reset_parameters()
 
@@ -71,12 +72,10 @@ class LayerNorm(nn.Module):
         init_shape = [x.shape[i] for i in range(len(x.shape))]
 
         dims = len(self.norm_shape)
-        shape = [x.shape[i] for i in range(len(x.shape) - dims)] + [
-            int(np.prod(list(self.norm_shape)))]
+        shape = [x.shape[i] for i in range(len(x.shape) - dims)] + [int(np.prod(list(self.norm_shape)))]
         x = x.view(shape)
 
-        x = (x - x.mean(dim=-1, keepdim=True)) / (
-                    torch.sqrt(x.var(unbiased=False, dim=-1, keepdim=True) + self.eps))
+        x = (x - x.mean(dim=-1, keepdim=True)) / (torch.sqrt(x.var(unbiased=False, dim=-1, keepdim=True) + self.eps))
 
         x = x.view(init_shape)
 
@@ -97,15 +96,12 @@ class MLP(nn.Module):
     From Guillem
     """
 
-    def __init__(self, input_dim, classifier=False, fc_dims=None,
-                 dropout_p=0.4, use_batchnorm=False):
+    def __init__(self, input_dim, classifier=False, fc_dims=None, dropout_p=0.4, use_batchnorm=False):
 
         super(MLP, self).__init__()
         self.classifier = classifier
 
-        assert isinstance(fc_dims, (list,
-                                    tuple)), 'fc_dims must be either a list or a tuple, but got {}'.format(
-            type(fc_dims))
+        assert isinstance(fc_dims, (list, tuple)), "fc_dims must be either a list or a tuple, but got {}".format(type(fc_dims))
 
         layers = []
         self.input_dim = input_dim
@@ -125,8 +121,8 @@ class MLP(nn.Module):
         self.fc_layers = nn.Sequential(*layers)
 
     def reset_parameters(self):
-        '''if self.classifier:
-            model.bottleneck.bias.requires_grad_(False)'''
+        """if self.classifier:
+            model.bottleneck.bias.requires_grad_(False)"""
         pass
 
     def forward(self, x):
@@ -146,14 +142,14 @@ def zeros(tensor):
 
 def weights_init_kaiming(m):
     classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
-        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_out')
+    if classname.find("Linear") != -1:
+        nn.init.kaiming_normal_(m.weight, a=0, mode="fan_out")
         nn.init.constant_(m.bias, 0.0)
-    elif classname.find('Conv') != -1:
-        nn.init.kaiming_normal_(m.weight, a=0, mode='fan_in')
+    elif classname.find("Conv") != -1:
+        nn.init.kaiming_normal_(m.weight, a=0, mode="fan_in")
         if m.bias is not None:
             nn.init.constant_(m.bias, 0.0)
-    elif classname.find('BatchNorm') != -1:
+    elif classname.find("BatchNorm") != -1:
         if m.affine:
             nn.init.constant_(m.weight, 1.0)
             nn.init.constant_(m.bias, 0.0)
@@ -161,16 +157,36 @@ def weights_init_kaiming(m):
 
 def weights_init_classifier(m):
     classname = m.__class__.__name__
-    if classname.find('Linear') != -1:
+    if classname.find("Linear") != -1:
         nn.init.normal_(m.weight, std=0.001)
         if m.bias:
             nn.init.constant_(m.bias, 0.0)
 
 
-def softmax(src, index, dim, dim_size, margin: float = 0.):
-    src_max = torch.clamp(scatter_max(src.float(), index, dim=dim, dim_size=dim_size)[0], min=0.)
+def softmax(src, index, dim, dim_size, margin: float = 0.0):
+    src_max = torch.clamp(scatter_max(src.float(), index, dim=dim, dim_size=dim_size)[0], min=0.0)
     src = (src - src_max.index_select(dim=dim, index=index)).exp()
     denom = scatter_add(src, index, dim=dim, dim_size=dim_size)
     out = src / (denom + (margin - src_max).exp()).index_select(dim, index)
+
+    return out
+
+
+def deterministic_softmax(src, index, dim_size, margin: float = 0.0):
+    # Calculate max per node
+    src2 = rearrange(src, "h (a d)-> h a d", d=dim_size)
+    src_max = torch.clamp(torch.max(src2, dim=-2).values, min=0.0)
+
+    # exp(src - max_node)
+    head_indices = torch.arange(src.shape[0]).type(torch.cuda.LongTensor).view(src.shape[0], 1).expand(-1, index.shape[0])
+    ext_src_max = src_max[head_indices, index]
+    src = (src - ext_src_max).exp()
+
+    # Calculate denominator
+    src2 = rearrange(src.squeeze(), "h (a d)-> h a d", d=dim_size)
+    denom = torch.sum(src2, dim=-2)
+    denom = (denom + (margin - src_max).exp())[head_indices, index]
+
+    out = src / denom
 
     return out

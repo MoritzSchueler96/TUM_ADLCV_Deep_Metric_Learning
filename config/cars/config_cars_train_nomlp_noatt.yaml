@@ -32,7 +32,6 @@ models:
       dropout_1: 0.1
       dropout_2: 0.1
       mult_attr: 0
-      no_att: 1
     classifier:
       neck: 1
       num_classes: 98

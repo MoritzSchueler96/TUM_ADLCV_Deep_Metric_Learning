@@ -1,3 +1,8 @@
+from logging import raiseExceptions
+from os import defpath
+
+from torch.cuda.memory import caching_allocator_alloc
+from torch_scatter.scatter import scatter_mean
 from .utils import *
 from torch import nn
 import torch
@@ -51,28 +56,34 @@ class MultiHeadDotProduct(nn.Module):
 
         # Extend according to edges
         r, c, e = edge_index[:, 0], edge_index[:, 1], edge_index.shape[0]
-        if self.determinstic:
-            head_indices = torch.arange(self.nhead).type(torch.cuda.LongTensor).view(self.nhead, 1).expand(-1, e)
-            q = q[head_indices, c, :]
-            k = k[head_indices, r, :]
-            v = v[head_indices, r, :]
-        else:
-            q = q.gather(1, c[:, :, None].expand(-1, -1, self.hdim))
-            k = k.gather(1, r[:, :, None].expand(-1, -1, self.hdim))
-            v = v.gather(1, r[:, :, None].expand(-1, -1, self.hdim))
+        head_indices = torch.arange(self.nhead).type(torch.cuda.LongTensor).view(self.nhead, 1).expand(-1, e)
+        q = q[head_indices, c, :]
+        k = k[head_indices, r, :]
+        v = v[head_indices, r, :]
+
         # Adjust dims
-        q, k, v = map(lambda t: rearrange(t, "h (n a) d-> h n a d", h=self.nhead, n=bs), (q, k, v))
+        q, k = map(lambda t: rearrange(t, "h (n a) d-> h n a d", h=self.nhead, n=bs), (q, k))
 
         # Calculate similarity: (Q @ K) / sqrt(d)
         sim = torch.einsum("h n a d , h n a d -> h n a", q, k) / math.sqrt(self.hdim)
 
+        sim = rearrange(sim, "h n a-> h (n a)")
+
         # Attention scores
-        attn = sim.softmax(dim=-1)
+        attn = deterministic_softmax(sim, c, bs).unsqueeze(-1)
         # Dropout
         attn = self.dropout(attn)
 
-        # Get weighted average of the values of all neighbors
-        feats = torch.einsum("h n a, h n a d -> h n d", attn, v)
+        # Obtain feature matrix and aggregate accordingly
+        feats = attn * v
+        feats = rearrange(feats, "h (n a) d-> h n a d", h=self.nhead, n=bs)
+        if self.aggr == "add":
+            feats = torch.sum(feats, dim=-3)
+        elif self.aggr == "max":
+            feats = torch.max(feats, dim=-3).values
+        elif self.aggr == "mean":
+            feats = torch.mean(feats, dim=-3)
+
         feats = rearrange(feats, "h n d -> n (h d)")
 
         # Linear layer

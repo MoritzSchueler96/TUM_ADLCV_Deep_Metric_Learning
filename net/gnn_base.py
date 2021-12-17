@@ -99,15 +99,7 @@ class GNNReID(nn.Module):
             self.fc = Sequential(*layers)
 
     def _build_GNN_Net(self, embed_dim: int = 2048):
-        # init aggregator
-        if self.gnn_params["aggregator"] == "add":
-            self.aggr = lambda out, row, dim, x_size: scatter_add(out, row, dim=dim, dim_size=x_size)
-        if self.gnn_params["aggregator"] == "mean":
-            self.aggr = lambda out, row, dim, x_size: scatter_mean(out, row, dim=dim, dim_size=x_size)
-        if self.gnn_params["aggregator"] == "max":
-            self.aggr = lambda out, row, dim, x_size: scatter_max(out, row, dim=dim, dim_size=x_size)
-
-        gnn = GNNNetwork(embed_dim, self.aggr, self.dev, self.gnn_params, self.gnn_params["num_layers"], self.deterministic)
+        gnn = GNNNetwork(embed_dim, self.dev, self.gnn_params, self.gnn_params["num_layers"], self.deterministic)
         gnn_model = MetaLayer(node_model=gnn)
 
         return gnn_model
@@ -154,10 +146,10 @@ class GNNReID(nn.Module):
 
 
 class GNNNetwork(nn.Module):
-    def __init__(self, embed_dim, aggr, dev, gnn_params, num_layers, deterministic):
+    def __init__(self, embed_dim, dev, gnn_params, num_layers, deterministic):
         super(GNNNetwork, self).__init__()
 
-        layers = [DotAttentionLayer(embed_dim, aggr, dev, gnn_params, deterministic) for _ in range(num_layers)]
+        layers = [DotAttentionLayer(embed_dim, dev, gnn_params, deterministic) for _ in range(num_layers)]
 
         self.layers = Sequential(*layers)
 
@@ -170,7 +162,7 @@ class GNNNetwork(nn.Module):
 
 
 class DotAttentionLayer(nn.Module):
-    def __init__(self, embed_dim, aggr, dev, params, determinstic, d_hid=None):
+    def __init__(self, embed_dim, dev, params, determinstic, d_hid=None):
         super(DotAttentionLayer, self).__init__()
         num_heads = params["num_heads"]
         self.res1 = params["res1"]
@@ -198,7 +190,9 @@ class DotAttentionLayer(nn.Module):
                     edge_dim=1,
                 )
             else:
-                self.att = MultiHeadDotProduct(embed_dim, num_heads, aggr, determinstic, mult_attr=params["mult_attr"]).to(dev)
+                self.att = MultiHeadDotProduct(embed_dim, num_heads, params["aggregator"], determinstic, mult_attr=params["mult_attr"]).to(
+                    dev
+                )
             self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
             self.dropout1 = nn.Dropout(params["dropout_1"])
 

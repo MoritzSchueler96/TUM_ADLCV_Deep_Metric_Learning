@@ -25,7 +25,8 @@ warnings.filterwarnings("ignore")
 def init_args():
     parser = argparse.ArgumentParser(description="Person Re-ID with GNN")
     parser.add_argument("--seed", type=int, default=0, help="Seed to set")
-    parser.add_argument("--deterministic", action="store_false", help="Make everything deterministic")
+    parser.add_argument("--deterministic", action="store_true", help="Make everything deterministic")
+    parser.add_argument("--no-deterministic", action="store_false", help="Make everything deterministic")
     parser.add_argument("--config_path", type=str, default="config/config_cub_test.yaml", help="Path to config file")
     parser.add_argument(
         "--dataset_path", type=str, default="from_yaml", help="Give path to dataset, else path from yaml file will be taken",
@@ -47,8 +48,6 @@ def init_args():
 
 
 def main(args):
-    utils.set_seeds(args.seed)
-    logging.info(f"Using seed {args.seed}")
     with open(args.config_path, "r") as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -62,8 +61,12 @@ def main(args):
         config["models"]["encoder_params"]["net_type"] = args.net_type
     if args.is_apex != "from_yaml":
         config["train_params"]["is_apex"] = args.is_apex
-    if args.deterministic != "from_yaml":
-        config["models"]["gnn_params"]["deterministic"] = args.deterministic
+    if args.no_deterministic != "from_yaml":
+        config["models"]["gnn_params"]["deterministic"] = args.no_deterministic
+
+    if args.deterministic:
+        utils.set_seeds(args.seed)
+        logging.info(f"Using seed {args.seed}")
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     logger.info("Switching to device {}".format(device))
