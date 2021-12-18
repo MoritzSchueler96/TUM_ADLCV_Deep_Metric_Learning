@@ -115,7 +115,7 @@ class Trainer():
             self.encoder = self.encoder.to(self.device)
 
             n_nodes = self.config["train_params"]["num_classes_iter"]*self.config["train_params"]["num_elements_class"]
-            self.gnn = net.GNNReID(self.device, n_nodes, self.config["models"]["gnn_params"], sz_embed).to(self.device)
+            self.gnn = net.GNNReID(self.device, self.config["models"]["gnn_params"], sz_embed).to(self.device)
 
             if self.config["models"]["gnn_params"]["pretrained_path"] != "no":
                 load_dict = torch.load(self.config["models"]["gnn_params"]["pretrained_path"], map_location="cpu")
@@ -255,10 +255,10 @@ class Trainer():
 
         # Add other losses of not pretraining
         if self.gnn_loss or self.of:
-            edge_attr, edge_index, fc7 = self.graph_generator.get_graph(fc7, Y)
+            edge_attr, edge_index, adj_mat, fc7 = self.graph_generator.get_graph(fc7, Y)
             if type(loss) != int:
                 loss = loss.to(self.device)
-            pred, feats = self.gnn(fc7, self.gnn.adj_mat, edge_index, edge_attr, train_params["output_train_gnn"])
+            pred, feats = self.gnn(fc7, adj_mat, edge_index, edge_attr, train_params["output_train_gnn"])
 
         # self.comp_list.append(self.comp(fc7, feats[-1]))
 

@@ -43,7 +43,7 @@ class GraphGenerator():
             for i, xi in enumerate(x):
                 for j, xj in enumerate(x[(i + 1):], i + 1):
                     W[i, j] = W[j, i] = self.sim(xi, xj) + 1e-8
-            W = W.cuda()
+            W = W.to(self.device)
 
         if self.set_negative == 'hard':
             W = self.set_negative_to_zero(W.to(self.device))
@@ -55,8 +55,9 @@ class GraphGenerator():
     def get_graph(self, x, Y=None):
         W = self._get_W(x)
         W, A = self._get_A(W)
+        adj_mat = A
 
         A = torch.nonzero(A)
         W = W[A[:, 0], A[:, 1]]
 
-        return W, A, x
+        return W, A, adj_mat, x

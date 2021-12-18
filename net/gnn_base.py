@@ -399,7 +399,7 @@ class GATv2(nn.Module):
         return self.output(x, adj_mat)
 
 class GNNReID(nn.Module):
-    def __init__(self, dev, n_nodes: int = 70, params: dict = None, embed_dim: int = 2048):
+    def __init__(self, dev, params: dict = None, embed_dim: int = 2048):
         super(GNNReID, self).__init__()
         num_classes = params["classifier"]["num_classes"]
         self.dev = dev
@@ -412,8 +412,7 @@ class GNNReID(nn.Module):
         embed_dim = int(embed_dim / params["red"])
         logger.info("Embed dim new {}".format(embed_dim))
 
-        self.adj_mat = torch.ones((n_nodes, n_nodes, 1))
-        self.gnn_model = self._build_GNN_Net(self.adj_mat, embed_dim=embed_dim)
+        self.gnn_model = self._build_GNN_Net(embed_dim=embed_dim)
 
         # classifier
         self.neck = params["classifier"]["neck"]
@@ -445,9 +444,9 @@ class GNNReID(nn.Module):
             )
             self.fc = Sequential(*layers)
 
-    def _build_GNN_Net(self, adj_mat: torch.tensor, embed_dim: int = 2048):
+    def _build_GNN_Net(self, embed_dim: int = 2048):
         if self.gat:
-            gnn_model = GATNetwork(self.dev, adj_mat, embed_dim, self.gnn_params, self.gnn_params["num_layers"])
+            gnn_model = GATNetwork(self.dev, embed_dim, self.gnn_params, self.gnn_params["num_layers"])
         else:
             # init aggregator
             if self.gnn_params["aggregator"] == "add":
@@ -576,11 +575,10 @@ class DotAttentionLayer(nn.Module):
 
 
 class GATNetwork(nn.Module):
-    def __init__(self, dev, adj_mat, embed_dim, params, num_layers):
+    def __init__(self, dev, embed_dim, params, num_layers):
         super(GATNetwork, self).__init__()
 
         self.dev = dev
-        self.adj_mat = adj_mat
 
         self.res1 = params["res1"]
         self.res2 = params["res2"]
