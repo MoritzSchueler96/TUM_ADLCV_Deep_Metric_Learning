@@ -8,7 +8,7 @@ from torch import nn
 import torch
 import math
 
-from einops import rearrange, repeat
+from einops import rearrange, reduce
 
 
 class MultiHeadDotProduct(nn.Module):
@@ -84,7 +84,7 @@ class MultiHeadDotProduct(nn.Module):
         feats = attn * v
         feats = rearrange(feats, "h (n a) d-> h n a d", h=self.nhead, n=bs)
         if self.aggr == "add":
-            feats = torch.sum(feats, dim=-3)
+            feats = torch.max(feats, dim=-3).values
         elif self.aggr == "max":
             feats = torch.max(feats, dim=-3).values
         elif self.aggr == "mean":

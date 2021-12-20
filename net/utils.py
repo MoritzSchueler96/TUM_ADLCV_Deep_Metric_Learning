@@ -180,7 +180,6 @@ def deterministic_softmax(src, index, batch_size, margin: float = 0.0):
         n = batch_size = nodes
         a = adjacent nodes
     """
-    # V
 
     # Calculate max per node
     src2 = rearrange(src, "h (n a)-> h n a", n=batch_size)
