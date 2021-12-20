@@ -23,7 +23,7 @@ models:
       aggregator: "add"
       num_heads: 8 
       attention: "no"
-      mlp: 1
+      mlp: 0
       dropout_mlp: 0.1
       norm1: 1
       norm2: 1

@@ -21,7 +21,7 @@ models:
     gnn:
       num_layers: 2 
       aggregator: "add"
-      num_heads: 8 
+      num_heads: 8
       attention: "dot" 
       mlp: 1
       dropout_mlp: 0.1

@@ -9,7 +9,7 @@ dependencies:
   - python=3.8
   - pytorch=1.10
   - torchvision
-  - cudatoolkit=10.2
+  - cudatoolkit=11.3
   - pyg
   - einops
   - numpy
