@@ -49,9 +49,15 @@ class MultiHeadDotProduct(nn.Module):
         q = self.q_linear(q)
         v = self.v_linear(v)
 
-        # Variables: n = bs, d = hdim, h = nheads
+        """
+        Variables used here:
+            h = nheads
+            d = hdim
+            n = batch_size = nodes
+            a = adjacent nodes
+        """
 
-        # Split into heads --> h * bs * embed_dim
+        # Split into heads --> h * n * d
         q, k, v = map(lambda t: rearrange(t, "n (h d) -> h n d", h=self.nhead), (q, k, v))
 
         # Extend according to edges
