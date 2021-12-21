@@ -145,10 +145,10 @@ class GNNReID(nn.Module):
 
 
 class GNNNetwork(nn.Module):
-    def __init__(self, embed_dim, dev, gnn_params, num_layers, deterministic):
+    def __init__(self, embed_dim, dev, gnn_params, num_layers):
         super(GNNNetwork, self).__init__()
 
-        layers = [DotAttentionLayer(embed_dim, dev, gnn_params, deterministic) for _ in range(num_layers)]
+        layers = [DotAttentionLayer(embed_dim, dev, gnn_params) for _ in range(num_layers)]
 
         self.layers = Sequential(*layers)
 
@@ -161,7 +161,7 @@ class GNNNetwork(nn.Module):
 
 
 class DotAttentionLayer(nn.Module):
-    def __init__(self, embed_dim, dev, params, determinstic, d_hid=None):
+    def __init__(self, embed_dim, dev, params, d_hid=None):
         super(DotAttentionLayer, self).__init__()
         num_heads = params["num_heads"]
         self.res1 = params["res1"]
