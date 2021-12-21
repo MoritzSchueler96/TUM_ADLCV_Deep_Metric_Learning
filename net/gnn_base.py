@@ -63,7 +63,6 @@ class GNNReID(nn.Module):
         self.dev = dev
         self.params = params
         self.gnn_params = params["gnn"]
-        self.deterministic = params["deterministic"]
 
         self.dim_red = nn.Linear(embed_dim, int(embed_dim / params["red"]))
         logger.info("Embed dim old {}".format(embed_dim))
@@ -99,7 +98,7 @@ class GNNReID(nn.Module):
             self.fc = Sequential(*layers)
 
     def _build_GNN_Net(self, embed_dim: int = 2048):
-        gnn = GNNNetwork(embed_dim, self.dev, self.gnn_params, self.gnn_params["num_layers"], self.deterministic)
+        gnn = GNNNetwork(embed_dim, self.dev, self.gnn_params, self.gnn_params["num_layers"])
         gnn_model = MetaLayer(node_model=gnn)
 
         return gnn_model
@@ -190,9 +189,7 @@ class DotAttentionLayer(nn.Module):
                     edge_dim=1,
                 )
             else:
-                self.att = MultiHeadDotProduct(embed_dim, num_heads, params["aggregator"], determinstic, mult_attr=params["mult_attr"]).to(
-                    dev
-                )
+                self.att = MultiHeadDotProduct(embed_dim, num_heads, params["aggregator"], mult_attr=params["mult_attr"]).to(dev)
             self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
             self.dropout1 = nn.Dropout(params["dropout_1"])
 
