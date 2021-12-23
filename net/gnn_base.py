@@ -8,6 +8,8 @@ import logging
 from .utils import *
 from .attentions import MultiHeadDotProduct
 import torch.utils.checkpoint as checkpoint
+from torch_geometric.nn.conv import GATConv, GATv2Conv
+
 
 logger = logging.getLogger("GNNReID.GNNModule")
 
@@ -467,6 +469,7 @@ class GNNReID(nn.Module):
         if self.dim_red is not None:
             feats = self.dim_red(feats)
 
+        edge_index = edge_index.t()
         feats = self.gnn_model(feats, adj_mat, edge_index, edge_attr)
         
         if self.params["cat"]:
@@ -579,6 +582,7 @@ class GATNetwork(nn.Module):
         super(GATNetwork, self).__init__()
 
         self.dev = dev
+        self.params = params
 
         self.res1 = params["res1"]
         self.res2 = params["res2"]
@@ -589,8 +593,35 @@ class GATNetwork(nn.Module):
         if params["gat"] == 1:
             for _ in range(num_layers):
                 layers.append(
+                    GATConv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                    ))
+                lin_layers.append(LinearLayer(embed_dim, params))
+
+        elif params["gat"] == 2:
+            for _ in range(num_layers):
+                layers.append(
+                    GATv2Conv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                    ))
+                lin_layers.append(LinearLayer(embed_dim, params))
+
+        elif params["gat"] == 3:
+            for _ in range(num_layers):
+                layers.append(
                     GAT(
-                        dev=self.dev,
                         in_features=embed_dim,
                         n_hidden=embed_dim,
                         n_classes=embed_dim,
@@ -599,11 +630,10 @@ class GATNetwork(nn.Module):
                     ))
                 lin_layers.append(LinearLayer(embed_dim, params))
 
-        elif params["gat"] == 2:
+        elif params["gat"] == 4:
             for _ in range(num_layers):
                 layers.append(
                     GATv2(
-                        dev=self.dev,
                         in_features=embed_dim,
                         n_hidden=embed_dim,
                         n_classes=embed_dim,
@@ -618,7 +648,10 @@ class GATNetwork(nn.Module):
     def forward(self, feats, adj_mat, edge_index, edge_attr):
         out = list()
         for layer, lin_layer in zip(self.layers, self.lin_layers):
-            feats = layer(feats, adj_mat, edge_index, edge_attr)
+            if self.params["gat"] < 3:
+                feats = layer(feats, edge_index, edge_attr)
+            else:
+                feats = layer(feats, adj_mat, edge_index, edge_attr)
             feats = lin_layer(feats)
             out.append(feats)
         return out
