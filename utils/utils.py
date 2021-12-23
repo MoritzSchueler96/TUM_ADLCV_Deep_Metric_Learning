@@ -9,6 +9,7 @@ def make_dir(dir):
     if not osp.isdir(dir):
         os.makedirs(dir)
 
+
 def set_seeds(seed: int):
     # For reproducibility
     random.seed(seed)

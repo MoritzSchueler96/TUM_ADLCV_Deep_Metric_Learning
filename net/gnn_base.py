@@ -407,7 +407,7 @@ class GNNReID(nn.Module):
         self.dev = dev
         self.params = params
         self.gnn_params = params["gnn"]
-        self.gat = "gat" in self.gnn_params
+        self.deterministic = params["deterministic"]
 
         self.dim_red = nn.Linear(embed_dim, int(embed_dim / params["red"]))
         logger.info("Embed dim old {}".format(embed_dim))
@@ -421,9 +421,7 @@ class GNNReID(nn.Module):
         dim = self.gnn_params["num_layers"] * embed_dim if self.params["cat"] else embed_dim
         every = self.params["every"]
         if self.neck:
-            layers = (
-                [nn.BatchNorm1d(dim) for _ in range(self.gnn_params["num_layers"])] if every else [nn.BatchNorm1d(dim)]
-            )
+            layers = [nn.BatchNorm1d(dim) for _ in range(self.gnn_params["num_layers"])] if every else [nn.BatchNorm1d(dim)]
             self.bottleneck = Sequential(*layers)
             for layer in self.bottleneck:
                 layer.bias.requires_grad_(False)
@@ -440,15 +438,13 @@ class GNNReID(nn.Module):
                 layer.apply(weights_init_classifier)
         else:
             layers = (
-                [nn.Linear(dim, num_classes) for _ in range(self.gnn_params["num_layers"])]
-                if every
-                else [nn.Linear(dim, num_classes)]
+                [nn.Linear(dim, num_classes) for _ in range(self.gnn_params["num_layers"])] if every else [nn.Linear(dim, num_classes)]
             )
             self.fc = Sequential(*layers)
 
     def _build_GNN_Net(self, embed_dim: int = 2048):
         if self.gat:
-            gnn_model = GATNetwork(self.dev, embed_dim, self.gnn_params, self.gnn_params["num_layers"])
+            gnn_model = GATNetwork(self.dev, embed_dim, self.gnn_params, self.gnn_params["num_layers"], self.deterministic)
         else:
             # init aggregator
             if self.gnn_params["aggregator"] == "add":
@@ -458,7 +454,7 @@ class GNNReID(nn.Module):
             if self.gnn_params["aggregator"] == "max":
                 self.aggr = lambda out, row, dim, x_size: scatter_max(out, row, dim=dim, dim_size=x_size)
 
-            gnn = GNNNetwork(self.dev, embed_dim, self.aggr, self.gnn_params, self.gnn_params["num_layers"])
+            gnn = GNNNetwork(self.dev, embed_dim, self.aggr, self.gnn_params, self.gnn_params["num_layers"], self.deterministic)
             gnn_model = MetaLayer(node_model=gnn)
 
         return gnn_model
@@ -506,12 +502,11 @@ class GNNReID(nn.Module):
 
 
 class GNNNetwork(nn.Module):
-    def __init__(self, dev, embed_dim, aggr, gnn_params, num_layers):
+    def __init__(self, dev, embed_dim, aggr, gnn_params, num_layers, deterministic):
         super(GNNNetwork, self).__init__()
 
         self.dev = dev
-        layers = [DotAttentionLayer(dev, embed_dim, aggr, gnn_params) for _ in range(num_layers)]
-
+        layers = [DotAttentionLayer(dev, embed_dim, aggr, gnn_params, deterministic) for _ in range(num_layers)]
         self.layers = Sequential(*layers)
 
     def forward(self, feats, edge_index, edge_attr):
@@ -523,7 +518,7 @@ class GNNNetwork(nn.Module):
 
 
 class DotAttentionLayer(nn.Module):
-    def __init__(self, dev, embed_dim, aggr, params, d_hid=None):
+    def __init__(self, dev, embed_dim, aggr, params, determinstic, d_hid=None):
         super(DotAttentionLayer, self).__init__()
         self.dev = dev
 
@@ -531,7 +526,7 @@ class DotAttentionLayer(nn.Module):
         self.res1 = params["res1"]
         self.res2 = params["res2"]
 
-        self.att = MultiHeadDotProduct(embed_dim, num_heads, aggr, mult_attr=params["mult_attr"]).to(dev)
+        self.att = MultiHeadDotProduct(embed_dim, num_heads, aggr, determinstic, mult_attr=params["mult_attr"]).to(dev)
 
         d_hid = 4 * embed_dim if d_hid is None else d_hid
         self.mlp = params["mlp"]
@@ -578,7 +573,7 @@ class DotAttentionLayer(nn.Module):
 
 
 class GATNetwork(nn.Module):
-    def __init__(self, dev, embed_dim, params, num_layers):
+    def __init__(self, dev, embed_dim, params, num_layers, deterministic):
         super(GATNetwork, self).__init__()
 
         self.dev = dev
@@ -696,3 +691,4 @@ class LinearLayer(nn.Module):
         feats = self.norm2(feats) if self.norm2 is not None else feats
 
         return feats
+

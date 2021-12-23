@@ -1,6 +1,6 @@
 mode: "train" #train/test/hyper_search/pretraining
 application: "DML"
-output_path: "."
+output_paht: "."
 
 models:
   encoder_params:
@@ -23,7 +23,7 @@ models:
       aggregator: "add"
       num_heads: 2 
       attention: "dot" 
-      mlp: 1
+      mlp: 0
       dropout_mlp: 0.1
       norm1: 1
       norm2: 1 
