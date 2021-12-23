@@ -407,6 +407,7 @@ class GNNReID(nn.Module):
         self.dev = dev
         self.params = params
         self.gnn_params = params["gnn"]
+        self.gat = "gat" in self.gnn_params
         self.deterministic = params["deterministic"]
 
         self.dim_red = nn.Linear(embed_dim, int(embed_dim / params["red"]))
@@ -526,7 +527,7 @@ class DotAttentionLayer(nn.Module):
         self.res1 = params["res1"]
         self.res2 = params["res2"]
 
-        self.att = MultiHeadDotProduct(embed_dim, num_heads, aggr, determinstic, mult_attr=params["mult_attr"]).to(dev)
+        self.att = MultiHeadDotProduct(dev, embed_dim, num_heads, aggr, determinstic, mult_attr=params["mult_attr"]).to(dev)
 
         d_hid = 4 * embed_dim if d_hid is None else d_hid
         self.mlp = params["mlp"]
@@ -617,6 +618,7 @@ class GATNetwork(nn.Module):
             for _ in range(num_layers):
                 layers.append(
                     GAT(
+                        dev = self.dev,
                         in_features=embed_dim,
                         n_hidden=embed_dim,
                         n_classes=embed_dim,
@@ -629,6 +631,7 @@ class GATNetwork(nn.Module):
             for _ in range(num_layers):
                 layers.append(
                     GATv2(
+                        dev=self.dev,
                         in_features=embed_dim,
                         n_hidden=embed_dim,
                         n_classes=embed_dim,

@@ -55,7 +55,8 @@ class GraphGenerator():
     def get_graph(self, x, Y=None):
         W = self._get_W(x)
         W, A = self._get_A(W)
-        adj_mat = A
+        adj_mat = A[:,:,None]
+        # adj_mat = torch.unsqueeze(A, dim=-1)
 
         A = torch.nonzero(A)
         W = W[A[:, 0], A[:, 1]]

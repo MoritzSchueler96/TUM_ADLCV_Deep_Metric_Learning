@@ -15,6 +15,7 @@ models:
 
   gnn_params:
     pretrained_path: "no" 
+    deterministic: 1
     red: 1
     cat: 1
     every: 0

@@ -15,6 +15,7 @@ models:
 
   gnn_params:
     pretrained_path: "no" 
+    deterministic: 1
     red: 1
     cat: 1
     every: 0
@@ -22,7 +23,7 @@ models:
       num_layers: 2
       aggregator: "add"
       num_heads: 8
-      attention: "gat2" 
+      attention: "dot" 
       mlp: 1
       dropout_mlp: 0.1
       norm1: 1

@@ -15,6 +15,7 @@ models:
 
   gnn_params:
     pretrained_path: "best_weights/0.7079675894665767gnn_resnet50_cub.pth"
+    deterministic: 1
     red: 1
     cat: 0
     every: 0
