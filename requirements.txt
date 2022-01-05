@@ -11,3 +11,4 @@ torch-scatter==2.0.9
 torch-sparse==0.6.12
 tqdm==4.62.3
 traitlets==5.1.1
+einops

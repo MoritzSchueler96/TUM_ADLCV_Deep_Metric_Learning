@@ -19,7 +19,7 @@ models:
     cat: 1
     every: 0
     gnn:
-      num_layers: 2
+      num_layers: 2 
       aggregator: "add"
       num_heads: 8
       attention: "dot" 
@@ -32,8 +32,6 @@ models:
       dropout_1: 0.1
       dropout_2: 0.1
       mult_attr: 0
-      gat: 1
-      dropout_gat: 0.1
     classifier:
       neck: 1
       num_classes: 98
@@ -60,10 +58,10 @@ dataset:
 train_params:
   num_classes_iter: 10 
   num_elements_class: 7 
-  lr: 0.000367
-  weight_decay: 2.5e-09
+  lr: 0.00036683239911604993 
+  weight_decay: 2.551918610962277e-09 
   num_epochs: 70
-  is_apex: 1
+  is_apex: 0
   temperatur: 0.1111111111111 
   output_train_enc: "plain"
   output_train_gnn: "plain"

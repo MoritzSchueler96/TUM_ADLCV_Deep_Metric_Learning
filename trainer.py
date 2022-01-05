@@ -22,41 +22,41 @@ autograd.set_detect_anomaly(True)
 
 logger = logging.getLogger("GNNReID.Training")
 
+
 def config_types(config):
     print("*" * 53, "Config Types", "*" * 53)
     for c in config:
         if c not in ["mode", "application", "output_path", "graph_params", "dataset", "train_params", "eval_params"]:
             print(c)
             for cn in config[c]:
-                print(" "*3, cn)
+                print(" " * 3, cn)
                 for cnn in config[c][cn]:
-                    print(" "*6, cnn)
+                    print(" " * 6, cnn)
                     if cnn not in ["bn_inception", "gnn", "classifier"]:
-                        print(" "*7, type(config[c][cn][cnn]))
+                        print(" " * 7, type(config[c][cn][cnn]))
                     else:
                         for cnnn in config[c][cn][cnn]:
-                            print(" "*9, cnnn)
-                            print(" "*10, type(config[c][cn][cnn][cnnn]))
+                            print(" " * 9, cnnn)
+                            print(" " * 10, type(config[c][cn][cnn][cnnn]))
         else:
             print(c)
             if c in ["mode", "application", "output_path"]:
                 print(" ", type(config[c]))
             else:
                 for cn2 in config[c]:
-                    print(" "*3, cn2)
+                    print(" " * 3, cn2)
                     if cn2 not in ["loss_fn"]:
-                        print(" "*4, type(config[c][cn2]))
+                        print(" " * 4, type(config[c][cn2]))
                     else:
                         for cnn2 in config[c][cn2]:
-                            print(" "*6, cnn2)
-                            print(" "*7, type(config[c][cn2][cnn2]))
+                            print(" " * 6, cnn2)
+                            print(" " * 7, type(config[c][cn2][cnn2]))
     print("*" * 120)
     print("")
 
-class Trainer():
-    
-    def __init__(self, config, save_folder_nets, save_folder_results,
-                 device, timer):
+
+class Trainer:
+    def __init__(self, config, save_folder_nets, save_folder_results, device, timer):
         self.config = config
         self.device = device
         self.save_folder_results = save_folder_results
@@ -72,7 +72,7 @@ class Trainer():
 
         self.best_recall = 0
         self.best_hypers = None
-        self.num_iter = 30 if 'hyper' in config['mode'].split('_') else 1
+        self.num_iter = 30 if "hyper" in config["mode"].split("_") else 1
 
         print("")
         print("*" * 55, "Versions", "*" * 55)
@@ -83,11 +83,14 @@ class Trainer():
         for d in devices:
             print("Using Cuda Device: ", d, "Name: ", torch.cuda.get_device_name(d))
         import torch_scatter
+
         print("Torch Scatter version: ", torch_scatter.__version__)
         print("Torch file: ", torch.__file__)
         import sklearn
+
         print("Scikit learn version: ", sklearn.__version__)
         import torchvision
+
         print("Torchvision version: ", torchvision.__version__)
         print("Torchvision file: ", torchvision.__file__)
         print("*" * 120)
@@ -114,7 +117,7 @@ class Trainer():
 
             self.encoder = self.encoder.to(self.device)
 
-            n_nodes = self.config["train_params"]["num_classes_iter"]*self.config["train_params"]["num_elements_class"]
+            n_nodes = self.config["train_params"]["num_classes_iter"] * self.config["train_params"]["num_elements_class"]
             self.gnn = net.GNNReID(self.device, n_nodes, self.config["models"]["gnn_params"], sz_embed).to(self.device)
 
             if self.config["models"]["gnn_params"]["pretrained_path"] != "no":
@@ -132,7 +135,8 @@ class Trainer():
             self.get_loss_fn(self.config["train_params"]["loss_fn"], self.config["dataset"]["num_classes"])
 
             # Do training in mixed precision
-            if self.config['train_params']['is_apex']:
+            if self.config["train_params"]["is_apex"]:
+                print("Using apex")
                 global amp
                 from apex import amp
 
@@ -153,8 +157,7 @@ class Trainer():
                 os.rename(
                     osp.join(self.save_folder_nets, self.fn + ".pth"),
                     osp.join(
-                        self.save_folder_nets_final,
-                        str(best_recall_iter) + mode + self.net_type + "_" + self.dataset_short + ".pth",
+                        self.save_folder_nets_final, str(best_recall_iter) + mode + self.net_type + "_" + self.dataset_short + ".pth",
                     ),
                 )
                 os.rename(
@@ -210,7 +213,7 @@ class Trainer():
                         return 0.0, self.encoder
 
                     # Backpropagation
-                    if train_params['is_apex']:
+                    if train_params["is_apex"]:
                         with amp.scale_loss(loss, self.opt) as scaled_loss:
                             scaled_loss.backward()
                     else:
@@ -258,16 +261,13 @@ class Trainer():
             edge_attr, edge_index, fc7 = self.graph_generator.get_graph(fc7, Y)
             if type(loss) != int:
                 loss = loss.to(self.device)
-            pred, feats = self.gnn(fc7, self.gnn.adj_mat, edge_index, edge_attr, train_params["output_train_gnn"])
+            pred, feats = self.gnn(fc7, edge_index, edge_attr, train_params["output_train_gnn"])
 
         # self.comp_list.append(self.comp(fc7, feats[-1]))
 
         if self.gnn_loss:
             if self.every:
-                loss1 = [
-                    gnn_loss(pr / self.config["train_params"]["temperatur"], Y)
-                    for gnn_loss, pr in zip(self.gnn_loss, pred)
-                ]
+                loss1 = [gnn_loss(pr / self.config["train_params"]["temperatur"], Y) for gnn_loss, pr in zip(self.gnn_loss, pred)]
             else:
                 loss1 = [self.gnn_loss(pred[-1] / self.config["train_params"]["temperatur"], Y)]
             lo = [train_params["loss_fn"]["scaling_gnn"] * l for l in loss1]
@@ -325,7 +325,7 @@ class Trainer():
             with torch.no_grad():
                 logger.info("EVALUATION")
                 if self.config["mode"] == "train" or self.config["mode"] == "test":
-                    mAP, top = self.evaluator.evaluate(
+                    nmi, top = self.evaluator.evaluate(
                         self.encoder,
                         self.dl_ev,
                         self.gallery_dl,
@@ -334,7 +334,7 @@ class Trainer():
                         nb_classes=self.config["dataset"]["num_classes"],
                     )
                 else:  # all other modes that involve gnn during test time
-                    mAP, top = self.evaluator.evaluate(
+                    nmi, top = self.evaluator.evaluate(
                         self.encoder,
                         self.dl_ev,
                         self.gallery_dl,
@@ -346,7 +346,7 @@ class Trainer():
                         nb_classes=self.config["dataset"]["num_classes"],
                     )
 
-                scores.append((mAP, top))
+                scores.append((nmi, top))
                 recall = top[0]
 
                 self.encoder.current_epoch = e
@@ -369,9 +369,7 @@ class Trainer():
         return best_recall_iter
 
     def save_results(self, train_params, since, end, best_recall_iter, scores):
-        logger.info(
-            "Completed {} epochs in {}s on {}".format(train_params["num_epochs"], end - since, self.dataset_short)
-        )
+        logger.info("Completed {} epochs in {}s on {}".format(train_params["num_epochs"], end - since, self.dataset_short))
 
         file_name = str(best_recall_iter) + "_" + self.dataset_short + "_" + str(self.timer)
         if "test" in self.config["mode"].split("_"):
@@ -434,9 +432,7 @@ class Trainer():
             if "gnn" in params["fns"].split("_"):
                 self.gnn_loss = nn.CrossEntropyLoss().to(self.device)
             elif "lsgnn" in params["fns"].split("_"):
-                self.gnn_loss = losses.CrossEntropyLabelSmooth(num_classes=num_classes, dev=self.device).to(
-                    self.device
-                )
+                self.gnn_loss = losses.CrossEntropyLabelSmooth(num_classes=num_classes, dev=self.device).to(self.device)
             elif "focalgnn" in params["fns"].split("_"):
                 self.gnn_loss = losses.FocalLoss().to(self.device)
             else:
@@ -445,8 +441,7 @@ class Trainer():
         else:  # GNN loss after every layer
             if "gnn" in params["fns"].split("_"):
                 self.gnn_loss = [
-                    nn.CrossEntropyLoss().to(self.device)
-                    for _ in range(self.config["models"]["gnn_params"]["gnn"]["num_layers"])
+                    nn.CrossEntropyLoss().to(self.device) for _ in range(self.config["models"]["gnn_params"]["gnn"]["num_layers"])
                 ]
             elif "lsgnn" in params["fns"].split("_"):
                 self.gnn_loss = [
@@ -488,16 +483,12 @@ class Trainer():
             self.distill = losses.CrossEntropyDistill().to(self.device)
             with open(params["preds"], "r") as f:
                 self.soft_targets = json.load(f)
-            self.soft_targets = {
-                k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()
-            }
+            self.soft_targets = {k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()}
         elif "distillKL" in params["fns"].split("_"):
             self.distill = losses.KLDivWithLogSM().to(self.device)
             with open(params["preds"], "r") as f:
                 self.soft_targets = json.load(f)
-            self.soft_targets = {
-                k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()
-            }
+            self.soft_targets = {k: F.softmax(torch.tensor(v) / params["soft_temp"]) for k, v in self.soft_targets.items()}
         else:
             self.distill = None
 

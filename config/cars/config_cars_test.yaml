@@ -1,10 +1,10 @@
-mode: "train" #train/test/hyper_search/pretraining
+mode: "test" 
 application: "DML"
 output_path: "."
 
 models:
   encoder_params:
-    pretrained_path: "no" 
+    pretrained_path: "results_nets/0.8749231336858935resnet50_cars.pth"
     net_type: "resnet50"
     neck: 0
     last_stride: 0
@@ -16,12 +16,12 @@ models:
   gnn_params:
     pretrained_path: "no" 
     red: 1
-    cat: 1
+    cat: 0
     every: 0
     gnn:
       num_layers: 2 
       aggregator: "add"
-      num_heads: 8 
+      num_heads: 8
       attention: "dot" 
       mlp: 1
       dropout_mlp: 0.1
@@ -51,34 +51,33 @@ dataset:
   number_aug: 2
   magnitude: 27
   sampling: "no"
-  bssampling: "no" #"NumberSampler"
+  bssampling: "no" #"NumerSampler"
   val: 0
   nb_workers: 4
 
 train_params:
-  num_classes_iter: 10 
+  num_classes_iter: 10
   num_elements_class: 7 
-  lr: 0.00036683239911604993 
-  weight_decay: 2.551918610962277e-09 
+  lr: 0.00036683239911604993
+  weight_decay: 2.551918610962277e-09
   num_epochs: 70
   is_apex: 0
-  temperatur: 0.1111111111111 
+  temperatur: 0.1111111111111
   output_train_enc: "plain"
   output_train_gnn: "plain"
   loss_fn:
     fns: "lsce_lsgnn" #ce/focalce can be used instead of lsce and lsgnn/focalgnn instead of gnn, rest can be added by ce_gnn_center...
     scaling_ce: 1
     scaling_gnn: 1
-    scaling_distance: 0.01
     scaling_center: 0.5
     scaling_triplet: 1
     scaling_of: 1
     scaling_of_pre: 1
     scaling_distill: 1
     soft_temp: 10
-    preds: "no" 
-    feats: "no" 
-    
+    preds: "no"
+    feats: "no"
+
 eval_params:
   output_test_enc: "plain"
   output_test_gnn: "plain"
