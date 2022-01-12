@@ -18,10 +18,11 @@ class MultiHeadDotProduct(nn.Module):
     nhead: number of attention heads
     """
 
-    def __init__(self, embed_dim, nhead, aggr, dropout=0.1, mult_attr=0):
+    def __init__(self, dev, embed_dim, nhead, aggr, dropout=0.1, mult_attr=0):
         super(MultiHeadDotProduct, self).__init__()
         print("MultiHeadDotProduct")
         self.embed_dim = embed_dim
+        self.dev = dev
         self.hdim = embed_dim // nhead
         self.nhead = nhead
         self.mult_attr = mult_attr
@@ -64,7 +65,7 @@ class MultiHeadDotProduct(nn.Module):
 
         # Extend according to edges
         r, c, e = edge_index[:, 0], edge_index[:, 1], edge_index.shape[0]
-        head_indices = torch.arange(self.nhead).type(torch.cuda.LongTensor).view(self.nhead, 1).expand(-1, e)
+        head_indices = torch.arange(self.nhead).type(torch.LongTensor).view(self.nhead, 1).expand(-1, e).to(self.dev)
         q = q[head_indices, c, :]
         k = k[head_indices, r, :]
         v = v[head_indices, r, :]
@@ -79,7 +80,7 @@ class MultiHeadDotProduct(nn.Module):
         # attn = torch.softmax(sim, dim=-2)
         # attn = rearrange(attn, "h n a-> h (n a)")
         sim = rearrange(sim, "h n a-> h (n a)")
-        attn = deterministic_softmax(sim, c, bs)
+        attn = deterministic_softmax(self.dev, sim, c, bs)
 
         # Dropout
         attn = self.dropout(attn)

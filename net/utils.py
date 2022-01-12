@@ -172,7 +172,7 @@ def softmax(src, index, dim, dim_size, margin: float = 0.0):
     return out
 
 
-def deterministic_softmax(src, index, batch_size):
+def deterministic_softmax(dev, src, index, batch_size):
     """
     Deterministic softmax implementation for nodeswise softmax on all neighbours
     Variables here:
@@ -186,7 +186,7 @@ def deterministic_softmax(src, index, batch_size):
     src_max = torch.max(src2, dim=-2).values
 
     # exp(src - max_node)
-    head_indices = torch.arange(src.shape[0]).type(torch.cuda.LongTensor).view(src.shape[0], 1).expand(-1, index.shape[0])
+    head_indices = torch.arange(src.shape[0]).type(torch.LongTensor).view(src.shape[0], 1).expand(-1, index.shape[0]).to(dev)
     ext_src_max = src_max[head_indices, index]
     src = (src - ext_src_max).exp()
 
