@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore")
 def init_args():
     parser = argparse.ArgumentParser(description="Person Re-ID with GNN")
     parser.add_argument("--seed", type=int, default=0, help="Seed to set")
-    parser.add_argument("--config_path", type=str, default="config/config_cub_test.yaml", help="Path to config file")
+    parser.add_argument("--config_path", type=str, default="config/cars/config_cars_train.yaml", help="Path to config file")
     parser.add_argument(
         "--dataset_path", type=str, default="from_yaml", help="Give path to dataset, else path from yaml file will be taken",
     )
