@@ -62,7 +62,7 @@ train_params:
   lr: 0.000367
   weight_decay: 2.5e-09
   num_epochs: 70
-  is_apex: 1
+  is_apex: 0
   temperatur: 0.1111111111111 
   output_train_enc: "plain"
   output_train_gnn: "plain"
