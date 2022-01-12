@@ -29,7 +29,7 @@ class MetaLayer(torch.nn.Module):
             if hasattr(item, "reset_parameters"):
                 item.reset_parameters()
 
-    def forward(self, feats, edge_index, edge_attr=None):
+    def forward(self, feats, adj_mat, edge_index, edge_attr=None):
 
         r, c = edge_index[:, 0], edge_index[:, 1]
 
@@ -38,9 +38,9 @@ class MetaLayer(torch.nn.Module):
             edge_attr = self.edge_model(edge_attr)
 
         if self.node_model is not None:
-            feats, edge_index, edge_attr = self.node_model(feats, edge_index, edge_attr)
+            feats, adj_mat, edge_index, edge_attr = self.node_model(feats, adj_mat, edge_index, edge_attr)
 
-        return feats, edge_index, edge_attr
+        return feats
 
     def __repr__(self):
         if self.edge_model:
@@ -98,13 +98,13 @@ class GNNReID(nn.Module):
 
         return gnn_model
 
-    def forward(self, feats, edge_index, edge_attr=None, output_option="norm"):
+    def forward(self, feats, adj_mat, edge_index, edge_attr=None, output_option="norm"):
         r, c = edge_index[:, 0], edge_index[:, 1]
 
         if self.dim_red is not None:
             feats = self.dim_red(feats)
 
-        feats, _, _ = self.gnn_model(feats, edge_index, edge_attr)
+        feats = self.gnn_model(feats, adj_mat, edge_index, edge_attr)
 
         if self.params["cat"]:
             feats = [torch.cat(feats, dim=1).to(self.dev)]
@@ -147,12 +147,12 @@ class GNNNetwork(nn.Module):
 
         self.layers = Sequential(*layers)
 
-    def forward(self, feats, edge_index, edge_attr):
+    def forward(self, feats, adj_mat, edge_index, edge_attr):
         out = list()
         for layer in self.layers:
-            feats, edge_index, edge_attr = layer(feats, edge_index, edge_attr)
+            feats, adj_mat, edge_index, edge_attr = layer(feats, adj_mat, edge_index, edge_attr)
             out.append(feats)
-        return out, edge_index, edge_attr
+        return out, adj_mat, edge_index, edge_attr
 
 
 class DotAttentionLayer(nn.Module):
@@ -184,7 +184,7 @@ class DotAttentionLayer(nn.Module):
                     dropout=params["dropout_gat"],
                 )
             else:
-                self.att = MultiHeadDotProduct(embed_dim, num_heads, params["aggregator"], mult_attr=params["mult_attr"]).to(dev)
+                self.att = MultiHeadDotProduct(self.dev, embed_dim, num_heads, params["aggregator"], mult_attr=params["mult_attr"]).to(dev)
             self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
             self.dropout1 = nn.Dropout(params["dropout_1"])
 
@@ -206,9 +206,9 @@ class DotAttentionLayer(nn.Module):
 
         return custom_forward
 
-    def forward(self, feats, edge_index, edge_attr):
+    def forward(self, feats, adj_mat, edge_index, edge_attr):
         if self.att != "no":
-            feats2 = self.att(feats, edge_index, edge_attr)
+            feats2 = self.att(feats, adj_mat, edge_index, edge_attr)
             # if gradient checkpointing should be apllied for the gnn, comment line above and uncomment line below
             # feats2 = checkpoint.checkpoint(self.custom(), feats, edge_index, edge_attr, preserve_rng_state=True)
             feats2 = self.dropout1(feats2)
@@ -221,7 +221,7 @@ class DotAttentionLayer(nn.Module):
             feats = feats + feats2 if self.res2 else feats2
             feats = self.norm2(feats) if self.norm2 is not None else feats
 
-        return feats, edge_index, edge_attr
+        return feats, adj_mat, edge_index, edge_attr
 
 
 class GraphAttentionLayer(nn.Module):

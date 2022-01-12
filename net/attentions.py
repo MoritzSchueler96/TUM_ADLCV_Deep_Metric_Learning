@@ -43,7 +43,7 @@ class MultiHeadDotProduct(nn.Module):
 
         self.reset_parameters()
 
-    def forward(self, feats: torch.tensor, edge_index: torch.tensor, edge_attr: torch.tensor):
+    def forward(self, feats: torch.tensor, adj_mat: torch.tensor, edge_index: torch.tensor, edge_attr: torch.tensor):
         q = k = v = feats
         bs = q.size(0)
 
@@ -96,7 +96,7 @@ class MultiHeadDotProduct(nn.Module):
         # Linear layer
         feats = self.out(feats)
 
-        return feats  # , edge_index, edge_attr
+        return feats
 
     def reset_parameters(self):
         nn.init.xavier_uniform_(self.q_linear.weight)
