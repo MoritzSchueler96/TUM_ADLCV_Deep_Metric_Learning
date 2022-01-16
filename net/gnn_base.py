@@ -230,7 +230,7 @@ class DotAttentionLayer(nn.Module):
 
     def forward(self, feats, adj_mat, edge_index, edge_attr):
         if self.att != "no":
-            if isinstance(self.att, GATConv):
+            if isinstance(self.att, GATConv) or isinstance(self.att, GATv2Conv):
                 feats2 = self.att(feats, edge_index, edge_attr)
             else:
                 feats2 = self.att(feats, adj_mat, edge_index, edge_attr)
