@@ -31,7 +31,9 @@ To set up a conda environment containing all used packages, please fist install 
    2.      conda activate intra_batch_dml
    3.      pip install torch==1.10.0+cu111 torchvision==0.11.1+cu111 torchaudio==0.10.0+cu111 -f https://download.pytorch.org/whl/cu111/torch_stable.html
    4.      pip install -r requirements.txt
-   5.  (Optional) If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
+   5.      cd libs/pytorch_geometric
+           pip install -e .
+   6.  (Optional) If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
 
         If you use Google Cloud Platform use the Python only version
 
