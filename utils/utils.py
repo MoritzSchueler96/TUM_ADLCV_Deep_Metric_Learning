@@ -14,6 +14,7 @@ def set_seeds(seed: int):
     # For reproducibility
     random.seed(seed)
     np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
