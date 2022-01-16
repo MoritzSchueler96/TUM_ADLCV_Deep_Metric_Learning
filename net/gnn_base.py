@@ -7,6 +7,7 @@ import torch.utils.checkpoint as checkpoint
 
 from .utils import *
 from .attentions import MultiHeadDotProduct
+from torch_geometric.nn.conv import GATConv, GATv2Conv
 
 logger = logging.getLogger("GNNReID.GNNModule")
 
@@ -103,7 +104,7 @@ class GNNReID(nn.Module):
 
         if self.dim_red is not None:
             feats = self.dim_red(feats)
-
+        edge_index = edge_index.t()
         feats = self.gnn_model(feats, adj_mat, edge_index, edge_attr)
 
         if self.params["cat"]:
@@ -183,6 +184,27 @@ class DotAttentionLayer(nn.Module):
                     n_heads=params["num_heads"],
                     dropout=params["dropout_gat"],
                 )
+            elif self.att == "gat3":
+                self.att = GATConv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                )
+
+            elif self.att == "gat4":
+                self.att = GATv2Conv(
+                        in_channels=embed_dim,
+                        out_channels=embed_dim,
+                        heads=params["num_heads"],
+                        concat=False,
+                        dropout=params["dropout_gat"],
+                        add_self_loops=False,
+                        edge_dim=1,
+                )
             else:
                 self.att = MultiHeadDotProduct(self.dev, embed_dim, num_heads, params["aggregator"], mult_attr=params["mult_attr"]).to(dev)
             self.norm1 = LayerNorm(embed_dim) if params["norm1"] else None
@@ -208,7 +230,10 @@ class DotAttentionLayer(nn.Module):
 
     def forward(self, feats, adj_mat, edge_index, edge_attr):
         if self.att != "no":
-            feats2 = self.att(feats, adj_mat, edge_index, edge_attr)
+            if isinstance(self.att, GATConv):
+                feats2 = self.att(feats, edge_index, edge_attr)
+            else:
+                feats2 = self.att(feats, adj_mat, edge_index, edge_attr)
             # if gradient checkpointing should be apllied for the gnn, comment line above and uncomment line below
             # feats2 = checkpoint.checkpoint(self.custom(), feats, edge_index, edge_attr, preserve_rng_state=True)
             feats2 = self.dropout1(feats2)

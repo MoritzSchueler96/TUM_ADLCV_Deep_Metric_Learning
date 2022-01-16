@@ -64,6 +64,7 @@ class MultiHeadDotProduct(nn.Module):
         q, k, v = map(lambda t: rearrange(t, "n (h d) -> h n d", h=self.nhead), (q, k, v))
 
         # Extend according to edges
+        edge_index = edge_index.t()
         r, c, e = edge_index[:, 0], edge_index[:, 1], edge_index.shape[0]
         head_indices = torch.arange(self.nhead).type(torch.LongTensor).view(self.nhead, 1).expand(-1, e).to(self.dev)
         q = q[head_indices, c, :]
