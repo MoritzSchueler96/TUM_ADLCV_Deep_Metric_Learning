@@ -186,24 +186,24 @@ class DotAttentionLayer(nn.Module):
                 )
             elif self.att == "gat3":
                 self.att = GATConv(
-                        in_channels=embed_dim,
-                        out_channels=embed_dim,
-                        heads=params["num_heads"],
-                        concat=False,
-                        dropout=params["dropout_gat"],
-                        add_self_loops=False,
-                        edge_dim=1,
+                    in_channels=embed_dim,
+                    out_channels=embed_dim,
+                    heads=params["num_heads"],
+                    concat=False,
+                    dropout=params["dropout_gat"],
+                    add_self_loops=False,
+                    edge_dim=1,
                 )
 
             elif self.att == "gat4":
                 self.att = GATv2Conv(
-                        in_channels=embed_dim,
-                        out_channels=embed_dim,
-                        heads=params["num_heads"],
-                        concat=False,
-                        dropout=params["dropout_gat"],
-                        add_self_loops=False,
-                        edge_dim=1,
+                    in_channels=embed_dim,
+                    out_channels=embed_dim,
+                    heads=params["num_heads"],
+                    concat=False,
+                    dropout=params["dropout_gat"],
+                    add_self_loops=False,
+                    edge_dim=1,
                 )
             else:
                 self.att = MultiHeadDotProduct(self.dev, embed_dim, num_heads, params["aggregator"], mult_attr=params["mult_attr"]).to(dev)

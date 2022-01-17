@@ -10,6 +10,7 @@ from itertools import chain
 from inspect import Parameter
 from collections import OrderedDict
 
+from einops import reduce, rearrange
 import torch
 from torch import Tensor
 from jinja2 import Template
@@ -422,8 +423,15 @@ class MessagePassing(torch.nn.Module):
             ptr = expand_left(ptr, dim=self.node_dim, dims=inputs.dim())
             return segment_csr(inputs, ptr, reduce=self.aggr)
         else:
-            return scatter(inputs, index, dim=self.node_dim, dim_size=dim_size,
-                           reduce=self.aggr)
+            deterministic = True
+            if deterministic:
+                feats = rearrange(inputs, "(n a) h d-> n a h d", n=dim_size)
+                self.aggr = "sum" if self.aggr == "add" else self.aggr
+                # Aggregate over each node according to aggregator
+                out = reduce(feats, "n a h d-> a h d", self.aggr)
+                return out
+            else:
+                return scatter(inputs, index, dim=self.node_dim, dim_size=dim_size, reduce=self.aggr)
 
     def message_and_aggregate(self, adj_t: SparseTensor) -> Tensor:
         r"""Fuses computations of :func:`message` and :func:`aggregate` into a
