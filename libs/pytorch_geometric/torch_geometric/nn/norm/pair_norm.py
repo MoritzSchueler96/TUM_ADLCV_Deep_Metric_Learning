@@ -30,7 +30,7 @@ class PairNorm(torch.nn.Module):
     """
     def __init__(self, scale: float = 1., scale_individually: bool = False,
                  eps: float = 1e-5):
-        super().__init__()
+        super(PairNorm, self).__init__()
 
         self.scale = scale
         self.scale_individually = scale_individually
@@ -49,13 +49,12 @@ class PairNorm(torch.nn.Module):
                 return scale * x / (self.eps + x.norm(2, -1, keepdim=True))
 
         else:
-            mean = scatter(x, batch, dim=0, reduce='mean')
-            x = x - mean.index_select(0, batch)
+            x = x - scatter(x, batch, dim=0, reduce='mean')[batch]
 
             if not self.scale_individually:
                 return scale * x / torch.sqrt(self.eps + scatter(
                     x.pow(2).sum(-1, keepdim=True), batch, dim=0,
-                    reduce='mean').index_select(0, batch))
+                    reduce='mean')[batch])
             else:
                 return scale * x / (self.eps + x.norm(2, -1, keepdim=True))
 

@@ -1,21 +1,15 @@
-from typing import Union, List, Optional
-
 import re
 
 import torch
-from torch import Tensor
 import torch.nn.functional as F
 from torch_scatter import scatter_add, scatter_mean
 
 import torch_geometric
-from torch_geometric.data import Data
 from torch_geometric.transforms import BaseTransform
 
 
 class GridSampling(BaseTransform):
     r"""Clusters points into voxels with size :attr:`size`.
-    Each cluster returned is a new point based on the mean of all points
-    inside the given cluster.
 
     Args:
         size (float or [float] or Tensor): Size of a voxel (in each dimension).
@@ -28,19 +22,20 @@ class GridSampling(BaseTransform):
             maximum coordinates found in :obj:`data.pos`.
             (default: :obj:`None`)
     """
-    def __init__(self, size: Union[float, List[float], Tensor],
-                 start: Optional[Union[float, List[float], Tensor]] = None,
-                 end: Optional[Union[float, List[float], Tensor]] = None):
+    def __init__(self, size, start=None, end=None):
         self.size = size
         self.start = start
         self.end = end
 
-    def __call__(self, data: Data) -> Data:
+    def __call__(self, data):
         num_nodes = data.num_nodes
 
-        batch = data.get('batch', None)
+        if 'batch' not in data:
+            batch = data.pos.new_zeros(num_nodes, dtype=torch.long)
+        else:
+            batch = data.batch
 
-        c = torch_geometric.nn.voxel_grid(data.pos, self.size, batch,
+        c = torch_geometric.nn.voxel_grid(data.pos, batch, self.size,
                                           self.start, self.end)
         c, perm = torch_geometric.nn.pool.consecutive.consecutive_cluster(c)
 
@@ -61,5 +56,5 @@ class GridSampling(BaseTransform):
 
         return data
 
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(size={self.size})'
+    def __repr__(self):
+        return '{}(size={})'.format(self.__class__.__name__, self.size)

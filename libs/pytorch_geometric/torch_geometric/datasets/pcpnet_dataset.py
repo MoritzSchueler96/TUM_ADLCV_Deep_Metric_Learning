@@ -81,7 +81,8 @@ class PCPNetDataset(InMemoryDataset):
         self.category = category
         self.split = split
 
-        super().__init__(root, transform, pre_transform, pre_filter)
+        super(PCPNetDataset, self).__init__(root, transform, pre_transform,
+                                            pre_filter)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
@@ -127,6 +128,6 @@ class PCPNetDataset(InMemoryDataset):
 
         torch.save(self.collate(data_list), self.processed_paths[0])
 
-    def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}({len(self)}, '
-                f'category={self.category})')
+    def __repr__(self):
+        return '{}({}, category={})'.format(self.__class__.__name__, len(self),
+                                            self.category)

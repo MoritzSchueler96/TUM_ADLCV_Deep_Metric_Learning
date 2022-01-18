@@ -41,3 +41,6 @@ class LocalCartesian(BaseTransform):
             data.edge_attr = cart
 
         return data
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)

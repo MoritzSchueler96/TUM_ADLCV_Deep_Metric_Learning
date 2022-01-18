@@ -68,8 +68,8 @@ class BaseStorage(MutableMapping):
         return self._mapping[key]
 
     def __setitem__(self, key: str, value: Any):
-        if value is None and key in self._mapping:
-            del self._mapping[key]
+        if value is None and key in self:
+            del self[key]
         elif value is not None:
             self._mapping[key] = value
 
@@ -254,7 +254,7 @@ class NodeStorage(BaseStorage):
                 return value.size(self._parent().__cat_dim__(key, value, self))
         if 'adj' in self and isinstance(self.adj, SparseTensor):
             return self.adj.size(0)
-        if 'adj_t' in self and isinstance(self.adj_t, SparseTensor):
+        if 'adj_t' in self and isinstance(self.adj, SparseTensor):
             return self.adj_t.size(1)
         warnings.warn(
             f"Unable to accurately infer 'num_nodes' from the attribute set "
@@ -283,18 +283,6 @@ class NodeStorage(BaseStorage):
     @property
     def num_features(self) -> int:
         return self.num_node_features
-
-    def is_node_attr(self, key: str) -> bool:
-        value = self[key]
-        cat_dim = self._parent().__cat_dim__(key, value, self)
-        if not isinstance(value, Tensor):
-            return False
-        if value.size(cat_dim) != self.num_nodes:
-            return False
-        return True
-
-    def is_edge_attr(self, key: str) -> bool:
-        return False
 
 
 class EdgeStorage(BaseStorage):
@@ -365,18 +353,6 @@ class EdgeStorage(BaseStorage):
 
         return size if dim is None else size[dim]
 
-    def is_node_attr(self, key: str) -> bool:
-        return False
-
-    def is_edge_attr(self, key: str) -> bool:
-        value = self[key]
-        cat_dim = self._parent().__cat_dim__(key, value, self)
-        if not isinstance(value, Tensor):
-            return False
-        if value.size(cat_dim) != self.num_edges:
-            return False
-        return True
-
     def is_coalesced(self) -> bool:
         for value in self.values('adj', 'adj_t'):
             return value.is_coalesced()
@@ -443,32 +419,6 @@ class GlobalStorage(NodeStorage, EdgeStorage):
     ) -> Union[Tuple[Optional[int], Optional[int]], Optional[int]]:
         size = (self.num_nodes, self.num_nodes)
         return size if dim is None else size[dim]
-
-    def is_node_attr(self, key: str) -> bool:
-        value = self[key]
-        cat_dim = self._parent().__cat_dim__(key, value, self)
-
-        num_nodes, num_edges = self.num_nodes, self.num_edges
-        if not isinstance(value, Tensor):
-            return False
-        if value.size(cat_dim) != num_nodes:
-            return False
-        if num_nodes != num_edges:
-            return True
-        return 'edge' not in key
-
-    def is_edge_attr(self, key: str) -> bool:
-        value = self[key]
-        cat_dim = self._parent().__cat_dim__(key, value, self)
-
-        num_nodes, num_edges = self.num_nodes, self.num_edges
-        if not isinstance(value, Tensor):
-            return False
-        if value.size(cat_dim) != num_edges:
-            return False
-        if num_nodes != num_edges:
-            return True
-        return 'edge' in key
 
 
 def recursive_apply_(data: Any, func: Callable):

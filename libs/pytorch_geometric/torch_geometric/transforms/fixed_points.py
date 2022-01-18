@@ -52,5 +52,6 @@ class FixedPoints(BaseTransform):
 
         return data
 
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.num}, replace={self.replace})'
+    def __repr__(self):
+        return '{}({}, replace={})'.format(self.__class__.__name__, self.num,
+                                           self.replace)

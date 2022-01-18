@@ -30,20 +30,6 @@ class Reddit2(InMemoryDataset):
             an :obj:`torch_geometric.data.Data` object and returns a
             transformed version. The data object will be transformed before
             being saved to disk. (default: :obj:`None`)
-
-    Stats:
-        .. list-table::
-            :widths: 10 10 10 10
-            :header-rows: 1
-
-            * - #nodes
-              - #edges
-              - #features
-              - #classes
-            * - 232,965
-              - 23,213,838
-              - 602
-              - 41
     """
 
     adj_full_id = '1sncK996BM5lpuDf75lDFqCiDZyErc1c2'
@@ -52,7 +38,7 @@ class Reddit2(InMemoryDataset):
     role_id = '1nJIKd77lcAGU4j-kVNx_AIGEkveIKz3A'
 
     def __init__(self, root, transform=None, pre_transform=None):
-        super().__init__(root, transform, pre_transform)
+        super(Reddit2, self).__init__(root, transform, pre_transform)
         self.data, self.slices = torch.load(self.processed_paths[0])
 
     @property
@@ -114,3 +100,6 @@ class Reddit2(InMemoryDataset):
         data = data if self.pre_transform is None else self.pre_transform(data)
 
         torch.save(self.collate([data]), self.processed_paths[0])
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)

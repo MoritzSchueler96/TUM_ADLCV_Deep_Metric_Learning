@@ -64,7 +64,8 @@ class SHREC2016(InMemoryDataset):
         self.part = partiality.lower()
         assert category.lower() in self.categories
         self.cat = category.lower()
-        super().__init__(root, transform, pre_transform, pre_filter)
+        super(SHREC2016, self).__init__(root, transform, pre_transform,
+                                        pre_filter)
         self.__ref__ = torch.load(self.processed_paths[0])
         path = self.processed_paths[1] if train else self.processed_paths[2]
         self.data, self.slices = torch.load(path)
@@ -82,8 +83,8 @@ class SHREC2016(InMemoryDataset):
 
     @property
     def processed_file_names(self):
-        name = f'{self.part}_{self.cat}.pt'
-        return [f'{i}_{name}' for i in ['ref', 'training', 'test']]
+        name = '{}_{}.pt'.format(self.part, self.cat)
+        return ['{}_{}'.format(i, name) for i in ['ref', 'training', 'test']]
 
     def download(self):
         path = download_url(self.train_url, self.raw_dir)
@@ -101,29 +102,29 @@ class SHREC2016(InMemoryDataset):
 
     def process(self):
         ref_data = read_off(
-            osp.join(self.raw_paths[0], 'null', f'{self.cat}.off'))
+            osp.join(self.raw_paths[0], 'null', '{}.off'.format(self.cat)))
 
         train_list = []
-        name = f'{self.part}_{self.cat}_*.off'
+        name = '{}_{}_*.off'.format(self.part, self.cat)
         paths = glob.glob(osp.join(self.raw_paths[0], self.part, name))
         paths = [path[:-4] for path in paths]
         paths = sorted(paths, key=lambda e: (len(e), e))
 
         for path in paths:
-            data = read_off(f'{path}.off')
-            y = read_txt_array(f'{path}.baryc_gt')
+            data = read_off('{}.off'.format(path))
+            y = read_txt_array('{}.baryc_gt'.format(path))
             data.y = y[:, 0].to(torch.long) - 1
             data.y_baryc = y[:, 1:]
             train_list.append(data)
 
         test_list = []
-        name = f'{self.part}_{self.cat}_*.off'
+        name = '{}_{}_*.off'.format(self.part, self.cat)
         paths = glob.glob(osp.join(self.raw_paths[1], self.part, name))
         paths = [path[:-4] for path in paths]
         paths = sorted(paths, key=lambda e: (len(e), e))
 
         for path in paths:
-            test_list.append(read_off(f'{path}.off'))
+            test_list.append(read_off('{}.off'.format(path)))
 
         if self.pre_filter is not None:
             train_list = [d for d in train_list if self.pre_filter(d)]
@@ -138,6 +139,6 @@ class SHREC2016(InMemoryDataset):
         torch.save(self.collate(train_list), self.processed_paths[1])
         torch.save(self.collate(test_list), self.processed_paths[2])
 
-    def __repr__(self) -> str:
-        return (f'{self.__class__.name__}({len(self)}, '
-                f'partiality={self.part}, category={self.cat})')
+    def __repr__(self):
+        return '{}({}, partiality={}, category={})'.format(
+            self.__class__.__name__, len(self), self.part, self.cat)

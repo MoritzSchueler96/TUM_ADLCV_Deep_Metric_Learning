@@ -25,3 +25,6 @@ class GenerateMeshNormals(BaseTransform):
         data.norm = norm
 
         return data
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)

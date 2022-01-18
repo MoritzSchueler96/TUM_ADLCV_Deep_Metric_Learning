@@ -1,4 +1,4 @@
-class BaseTransform:
+class BaseTransform(object):
     r"""An abstract base class for writing transforms.
 
     Transforms are a general way to modify and customize

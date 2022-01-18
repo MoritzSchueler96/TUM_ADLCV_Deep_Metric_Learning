@@ -2,7 +2,6 @@ from .karate import KarateClub
 from .tu_dataset import TUDataset
 from .gnn_benchmark_dataset import GNNBenchmarkDataset
 from .planetoid import Planetoid
-from .fake import FakeDataset, FakeHeteroDataset
 from .nell import NELL
 from .citation_full import CitationFull, CoraFull
 from .coauthor import Coauthor
@@ -42,7 +41,7 @@ from .pascal import PascalVOCKeypoints
 from .pascal_pf import PascalPF
 from .snap_dataset import SNAPDataset
 from .suite_sparse import SuiteSparseMatrixCollection
-# from .particle import TrackMLParticleTrackingDataset
+from .particle import TrackMLParticleTrackingDataset
 from .aminer import AMiner
 from .word_net import WordNet18, WordNet18RR
 from .wikics import WikiCS
@@ -51,10 +50,8 @@ from .wikipedia_network import WikipediaNetwork
 from .actor import Actor
 from .ogb_mag import OGB_MAG
 from .dblp import DBLP
-from .movie_lens import MovieLens
 from .imdb import IMDB
 from .last_fm import LastFM
-from .hgb_dataset import HGBDataset
 from .jodie import JODIEDataset
 from .mixhop_synthetic_dataset import MixHopSyntheticDataset
 from .upfd import UPFD
@@ -65,25 +62,12 @@ from .deezer_europe import DeezerEurope
 from .gemsec import GemsecDeezer
 from .twitch import Twitch
 from .airports import Airports
-from .ba_shapes import BAShapes
-from .malnet_tiny import MalNetTiny
-from .omdb import OMDB
-from .polblogs import PolBlogs
-from .email_eu_core import EmailEUCore
-from .sbm_dataset import StochasticBlockModelDataset
-from .sbm_dataset import RandomPartitionGraphDataset
-from .linkx_dataset import LINKXDataset
-from .elliptic import EllipticBitcoinDataset
-
-import torch_geometric.datasets.utils  # noqa
 
 __all__ = [
     'KarateClub',
     'TUDataset',
     'GNNBenchmarkDataset',
     'Planetoid',
-    'FakeDataset',
-    'FakeHeteroDataset',
     'NELL',
     'CitationFull',
     'CoraFull',
@@ -124,7 +108,7 @@ __all__ = [
     'PascalPF',
     'SNAPDataset',
     'SuiteSparseMatrixCollection',
-    # 'TrackMLParticleTrackingDataset',
+    'TrackMLParticleTrackingDataset',
     'AMiner',
     'WordNet18',
     'WordNet18RR',
@@ -134,10 +118,8 @@ __all__ = [
     'Actor',
     'OGB_MAG',
     'DBLP',
-    'MovieLens',
     'IMDB',
     'LastFM',
-    'HGBDataset',
     'JODIEDataset',
     'MixHopSyntheticDataset',
     'UPFD',
@@ -148,15 +130,6 @@ __all__ = [
     'GemsecDeezer',
     'Twitch',
     'Airports',
-    'BAShapes',
-    'MalNetTiny',
-    'OMDB',
-    'PolBlogs',
-    'EmailEUCore',
-    'StochasticBlockModelDataset',
-    'RandomPartitionGraphDataset',
-    'LINKXDataset',
-    'EllipticBitcoinDataset',
 ]
 
 classes = __all__

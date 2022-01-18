@@ -65,9 +65,9 @@ class RandomLinkSplit(BaseTransform):
             edges to the number of positive edges. (default: :obj:`1.0`)
         disjoint_train_ratio (int or float, optional): If set to a value
             greater than :obj:`0.0`, training edges will not be shared for
-            message passing and supervision. Instead,
-            :obj:`disjoint_train_ratio` edges are used as ground-truth labels
-            for supervision during training. (default: :obj:`0.0`)
+            message passing and supervision. Instead, :disjoint_train_ratio`
+            edges are used as ground-truth labels for supervision during
+            training. (default: :obj:`0.0`)
         edge_types (Tuple[EdgeType] or List[EdgeType], optional): The edge
             types used for performing edge-level splitting in case of
             operating on :class:`~torch_geometric.data.HeteroData` objects.
@@ -144,13 +144,9 @@ class RandomLinkSplit(BaseTransform):
             is_undirected &= rev_edge_type is None
 
             edge_index = store.edge_index
+            perm = torch.randperm(edge_index.size(1), device=edge_index.device)
             if is_undirected:
-                mask = edge_index[0] <= edge_index[1]
-                perm = mask.nonzero(as_tuple=False).view(-1)
-                perm = perm[torch.randperm(perm.size(0), device=perm.device)]
-            else:
-                device = edge_index.device
-                perm = torch.randperm(edge_index.size(1), device=device)
+                perm = perm[edge_index[0] <= edge_index[1]]
 
             num_val = self.num_val
             if isinstance(num_val, float):
@@ -230,12 +226,12 @@ class RandomLinkSplit(BaseTransform):
         for key, value in store.items():
             if key == 'edge_index':
                 continue
-
-            if store.is_edge_attr(key):
-                value = value[index]
-                if is_undirected:
-                    value = torch.cat([value, value], dim=0)
-                store[key] = value
+            if isinstance(value, Tensor):
+                if store._key is not None or store._parent().is_edge_attr(key):
+                    value = value[index]
+                    if is_undirected:
+                        value = torch.cat([value, value], dim=0)
+                    store[key] = value
 
         edge_index = store.edge_index[:, index]
         if is_undirected:

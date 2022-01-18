@@ -1,10 +1,8 @@
 import torch
 
-from torch_geometric.graphgym.register import (register_node_encoder,
-                                               register_edge_encoder)
+import torch_geometric.graphgym.register as register
 
 
-@register_node_encoder('Integer')
 class IntegerFeatureEncoder(torch.nn.Module):
     """
     Provides an encoder for integer node features.
@@ -15,7 +13,7 @@ class IntegerFeatureEncoder(torch.nn.Module):
         embedding mapping to learn from
     """
     def __init__(self, emb_dim, num_classes=None):
-        super().__init__()
+        super(IntegerFeatureEncoder, self).__init__()
 
         self.encoder = torch.nn.Embedding(num_classes, emb_dim)
         torch.nn.init.xavier_uniform_(self.encoder.weight.data)
@@ -28,7 +26,6 @@ class IntegerFeatureEncoder(torch.nn.Module):
         return batch
 
 
-@register_node_encoder('Atom')
 class AtomEncoder(torch.nn.Module):
     """
     The atom Encoder used in OGB molecule dataset.
@@ -38,7 +35,7 @@ class AtomEncoder(torch.nn.Module):
         num_classes: None
     """
     def __init__(self, emb_dim, num_classes=None):
-        super().__init__()
+        super(AtomEncoder, self).__init__()
 
         from ogb.utils.features import get_atom_feature_dims
 
@@ -59,7 +56,6 @@ class AtomEncoder(torch.nn.Module):
         return batch
 
 
-@register_edge_encoder('Bond')
 class BondEncoder(torch.nn.Module):
     """
     The bond Encoder used in OGB molecule dataset.
@@ -68,7 +64,7 @@ class BondEncoder(torch.nn.Module):
         emb_dim (int): Output edge embedding dimension
     """
     def __init__(self, emb_dim):
-        super().__init__()
+        super(BondEncoder, self).__init__()
 
         from ogb.utils.features import get_bond_feature_dims
 
@@ -88,3 +84,18 @@ class BondEncoder(torch.nn.Module):
 
         batch.edge_attr = bond_embedding
         return batch
+
+
+node_encoder_dict = {'Integer': IntegerFeatureEncoder, 'Atom': AtomEncoder}
+
+register.node_encoder_dict = {
+    **register.node_encoder_dict,
+    **node_encoder_dict
+}
+
+edge_encoder_dict = {'Bond': BondEncoder}
+
+register.edge_encoder_dict = {
+    **register.edge_encoder_dict,
+    **edge_encoder_dict
+}

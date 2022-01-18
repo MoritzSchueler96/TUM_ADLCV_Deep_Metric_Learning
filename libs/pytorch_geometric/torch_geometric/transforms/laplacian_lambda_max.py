@@ -50,5 +50,6 @@ class LaplacianLambdaMax(BaseTransform):
 
         return data
 
-    def __repr__(self) -> str:
-        return f'{self.__class__.__name__}(normalization={self.normalization})'
+    def __repr__(self):
+        return '{}(normalization={})'.format(self.__class__.__name__,
+                                             self.normalization)

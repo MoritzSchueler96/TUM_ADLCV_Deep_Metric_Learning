@@ -28,3 +28,6 @@ class TwoHop(BaseTransform):
             data.edge_attr = edge_attr
 
         return data
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)
