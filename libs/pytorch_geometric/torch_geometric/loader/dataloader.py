@@ -1,4 +1,4 @@
-from typing import Union, List, Optional
+from typing import Union, List
 
 from collections.abc import Mapping, Sequence
 
@@ -8,14 +8,14 @@ from torch.utils.data.dataloader import default_collate
 from torch_geometric.data import Data, HeteroData, Dataset, Batch
 
 
-class Collater:
+class Collater(object):
     def __init__(self, follow_batch, exclude_keys):
         self.follow_batch = follow_batch
         self.exclude_keys = exclude_keys
 
-    def __call__(self, batch):
+    def collate(self, batch):
         elem = batch[0]
-        if isinstance(elem, (Data, HeteroData)):
+        if isinstance(elem, Data) or isinstance(elem, HeteroData):
             return Batch.from_data_list(batch, self.follow_batch,
                                         self.exclude_keys)
         elif isinstance(elem, torch.Tensor):
@@ -27,16 +27,16 @@ class Collater:
         elif isinstance(elem, str):
             return batch
         elif isinstance(elem, Mapping):
-            return {key: self([data[key] for data in batch]) for key in elem}
+            return {key: self.collate([d[key] for d in batch]) for key in elem}
         elif isinstance(elem, tuple) and hasattr(elem, '_fields'):
-            return type(elem)(*(self(s) for s in zip(*batch)))
+            return type(elem)(*(self.collate(s) for s in zip(*batch)))
         elif isinstance(elem, Sequence) and not isinstance(elem, str):
-            return [self(s) for s in zip(*batch)]
+            return [self.collate(s) for s in zip(*batch)]
 
-        raise TypeError(f'DataLoader found invalid type: {type(elem)}')
+        raise TypeError('DataLoader found invalid type: {}'.format(type(elem)))
 
-    def collate(self, batch):  # Deprecated...
-        return self(batch)
+    def __call__(self, batch):
+        return self.collate(batch)
 
 
 class DataLoader(torch.utils.data.DataLoader):
@@ -52,9 +52,9 @@ class DataLoader(torch.utils.data.DataLoader):
         shuffle (bool, optional): If set to :obj:`True`, the data will be
             reshuffled at every epoch. (default: :obj:`False`)
         follow_batch (List[str], optional): Creates assignment batch
-            vectors for each key in the list. (default: :obj:`None`)
+            vectors for each key in the list. (default: :obj:`[]`)
         exclude_keys (List[str], optional): Will exclude each key in the
-            list. (default: :obj:`None`)
+            list. (default: :obj:`[]`)
         **kwargs (optional): Additional arguments of
             :class:`torch.utils.data.DataLoader`.
     """
@@ -63,22 +63,18 @@ class DataLoader(torch.utils.data.DataLoader):
         dataset: Union[Dataset, List[Data], List[HeteroData]],
         batch_size: int = 1,
         shuffle: bool = False,
-        follow_batch: Optional[List[str]] = None,
-        exclude_keys: Optional[List[str]] = None,
+        follow_batch: List[str] = [],
+        exclude_keys: List[str] = [],
         **kwargs,
     ):
 
-        if 'collate_fn' in kwargs:
-            del kwargs['collate_fn']
+        if "collate_fn" in kwargs:
+            del kwargs["collate_fn"]
 
-        # Save for PyTorch Lightning:
+        # Save for PyTorch Lightning...
         self.follow_batch = follow_batch
         self.exclude_keys = exclude_keys
 
-        super().__init__(
-            dataset,
-            batch_size,
-            shuffle,
-            collate_fn=Collater(follow_batch, exclude_keys),
-            **kwargs,
-        )
+        super().__init__(dataset, batch_size, shuffle,
+                         collate_fn=Collater(follow_batch,
+                                             exclude_keys), **kwargs)

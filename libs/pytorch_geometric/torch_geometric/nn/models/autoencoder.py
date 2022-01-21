@@ -57,7 +57,7 @@ class GAE(torch.nn.Module):
             (default: :obj:`None`)
     """
     def __init__(self, encoder, decoder=None):
-        super().__init__()
+        super(GAE, self).__init__()
         self.encoder = encoder
         self.decoder = InnerProductDecoder() if decoder is None else decoder
         GAE.reset_parameters(self)
@@ -143,7 +143,7 @@ class VGAE(GAE):
             (default: :obj:`None`)
     """
     def __init__(self, encoder, decoder=None):
-        super().__init__(encoder, decoder)
+        super(VGAE, self).__init__(encoder, decoder)
 
     def reparametrize(self, mu, logstd):
         if self.training:
@@ -192,12 +192,12 @@ class ARGA(GAE):
             (default: :obj:`None`)
     """
     def __init__(self, encoder, discriminator, decoder=None):
-        super().__init__(encoder, decoder)
+        super(ARGA, self).__init__(encoder, decoder)
         self.discriminator = discriminator
         reset(self.discriminator)
 
     def reset_parameters(self):
-        super().reset_parameters()
+        super(ARGA, self).reset_parameters()
         reset(self.discriminator)
 
     def reg_loss(self, z):
@@ -239,7 +239,7 @@ class ARGVA(ARGA):
             (default: :obj:`None`)
     """
     def __init__(self, encoder, discriminator, decoder=None):
-        super().__init__(encoder, discriminator, decoder)
+        super(ARGVA, self).__init__(encoder, discriminator, decoder)
         self.VGAE = VGAE(encoder, decoder)
 
     @property

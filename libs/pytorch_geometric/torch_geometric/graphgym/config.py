@@ -1,14 +1,7 @@
-from typing import Any
-
-import os
-import shutil
-import inspect
 import logging
-import functools
-from dataclasses import asdict
-from collections.abc import Iterable
-
+import os
 from yacs.config import CfgNode as CN
+import shutil
 
 from torch_geometric.data.makedirs import makedirs
 import torch_geometric.graphgym.register as register
@@ -209,6 +202,26 @@ def set_cfg(cfg):
 
     # Define label: Column name
     cfg.dataset.label_column = 'none'
+
+    # ----------------------------------------------------------------------- #
+    # Snowflake options
+    # ----------------------------------------------------------------------- #
+    cfg.snowflake = CN()
+
+    # Account name
+    cfg.snowflake.account = 'EPA65780'
+
+    # User name
+    cfg.snowflake.user = 'yjxxx'
+
+    # Password
+    cfg.snowflake.password = 'Test12345'
+
+    # Warehouse name
+    cfg.snowflake.warehouse = 'SF_TUTS_WH'
+
+    # Database name
+    cfg.snowflake.database = 'Vrtex'
 
     # ----------------------------------------------------------------------- #
     # Training options
@@ -496,21 +509,6 @@ def makedirs_rm_exist(dir):
     os.makedirs(dir, exist_ok=True)
 
 
-def get_fname(fname):
-    r"""
-    Extract filename from file name path
-
-    Args:
-        fname (string): Filename for the yaml format configuration file
-    """
-    fname = fname.split('/')[-1]
-    if fname.endswith('.yaml'):
-        fname = fname[:-5]
-    elif fname.endswith('.yml'):
-        fname = fname[:-4]
-    return fname
-
-
 def set_run_dir(out_dir, fname):
     r"""
     Create the directory for each random seed experiment run
@@ -520,7 +518,11 @@ def set_run_dir(out_dir, fname):
         fname (string): Filename for the yaml format configuration file
 
     """
-    fname = get_fname(fname)
+    fname = fname.split('/')[-1]
+    if fname.endswith('.yaml'):
+        fname = fname[:-5]
+    elif fname.endswith('.yml'):
+        fname = fname[:-4]
     cfg.run_dir = os.path.join(out_dir, fname, str(cfg.seed))
     # Make output directory
     if cfg.train.auto_resume:
@@ -539,35 +541,12 @@ def set_agg_dir(out_dir, fname):
         fname (string): Filename for the yaml format configuration file
 
     """
-    fname = get_fname(fname)
+    fname = fname.split('/')[-1]
+    if fname.endswith('.yaml'):
+        fname = fname[:-5]
+    elif fname.endswith('.yml'):
+        fname = fname[:-4]
     return os.path.join(out_dir, fname)
 
 
 set_cfg(cfg)
-
-
-def from_config(func):
-    if inspect.isclass(func):
-        params = list(inspect.signature(func.__init__).parameters.values())[1:]
-    else:
-        params = list(inspect.signature(func).parameters.values())
-
-    arg_names = [p.name for p in params]
-    has_defaults = [p.default != inspect.Parameter.empty for p in params]
-
-    @functools.wraps(func)
-    def wrapper(*args, cfg: Any = None, **kwargs):
-        if cfg is not None:
-            cfg = dict(cfg) if isinstance(cfg, Iterable) else asdict(cfg)
-
-            iterator = zip(arg_names[len(args):], has_defaults[len(args):])
-            for arg_name, has_default in iterator:
-                if arg_name in kwargs:
-                    continue
-                elif arg_name in cfg:
-                    kwargs[arg_name] = cfg[arg_name]
-                elif not has_default:
-                    raise ValueError(f"'cfg.{arg_name}' undefined")
-        return func(*args, **kwargs)
-
-    return wrapper

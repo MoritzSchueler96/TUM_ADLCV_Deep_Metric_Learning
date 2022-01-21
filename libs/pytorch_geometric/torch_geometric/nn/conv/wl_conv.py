@@ -18,7 +18,7 @@ class WLConv(torch.nn.Module):
         \mathbf{x}_j \colon j \in \mathcal{N}(i) \} \right)
     """
     def __init__(self):
-        super().__init__()
+        super(WLConv, self).__init__()
         self.hashmap = {}
 
     def reset_parameters(self):
@@ -69,3 +69,6 @@ class WLConv(torch.nn.Module):
             out /= out.norm(dim=-1, keepdim=True)
 
         return out
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)

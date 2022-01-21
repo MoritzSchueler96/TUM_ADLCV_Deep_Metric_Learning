@@ -24,3 +24,6 @@ class Delaunay(BaseTransform):
             data.face = face.t().contiguous().to(data.pos.device, torch.long)
 
         return data
+
+    def __repr__(self):
+        return '{}()'.format(self.__class__.__name__)

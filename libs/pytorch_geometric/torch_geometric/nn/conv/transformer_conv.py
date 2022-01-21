@@ -49,8 +49,8 @@ class TransformerConv(MessagePassing):
                 \alpha_{i,j} \mathbf{W}_2 \vec{x}_j \right)}_{=\mathbf{m}_i}
 
             with :math:`\beta_i = \textrm{sigmoid}(\mathbf{w}_5^{\top}
-            [ \mathbf{W}_1 \mathbf{x}_i, \mathbf{m}_i, \mathbf{W}_1
-            \mathbf{x}_i - \mathbf{m}_i ])` (default: :obj:`False`)
+            [ \mathbf{x}_i, \mathbf{m}_i, \mathbf{x}_i - \mathbf{m}_i ])`
+            (default: :obj:`False`)
         dropout (float, optional): Dropout probability of the normalized
             attention coefficients which exposes each node to a stochastically
             sampled neighborhood during training. (default: :obj:`0`)
@@ -110,7 +110,6 @@ class TransformerConv(MessagePassing):
         self.concat = concat
         self.dropout = dropout
         self.edge_dim = edge_dim
-        self._alpha = None
 
         if isinstance(in_channels, int):
             in_channels = (in_channels, in_channels)
@@ -163,18 +162,11 @@ class TransformerConv(MessagePassing):
                 attention weights for each edge. (default: :obj:`None`)
         """
 
-        H, C = self.heads, self.out_channels
-
         if isinstance(x, Tensor):
             x: PairTensor = (x, x)
 
-        query = self.lin_query(x[1]).view(-1, H, C)
-        key = self.lin_key(x[0]).view(-1, H, C)
-        value = self.lin_value(x[0]).view(-1, H, C)
-
-        # propagate_type: (query: Tensor, key:Tensor, value: Tensor, edge_attr: OptTensor) # noqa
-        out = self.propagate(edge_index, query=query, key=key, value=value,
-                             edge_attr=edge_attr, size=None)
+        # propagate_type: (x: PairTensor, edge_attr: OptTensor)
+        out = self.propagate(edge_index, x=x, edge_attr=edge_attr, size=None)
 
         alpha = self._alpha
         self._alpha = None
@@ -202,28 +194,32 @@ class TransformerConv(MessagePassing):
         else:
             return out
 
-    def message(self, query_i: Tensor, key_j: Tensor, value_j: Tensor,
-                edge_attr: OptTensor, index: Tensor, ptr: OptTensor,
+    def message(self, x_i: Tensor, x_j: Tensor, edge_attr: OptTensor,
+                index: Tensor, ptr: OptTensor,
                 size_i: Optional[int]) -> Tensor:
+
+        query = self.lin_query(x_i).view(-1, self.heads, self.out_channels)
+        key = self.lin_key(x_j).view(-1, self.heads, self.out_channels)
 
         if self.lin_edge is not None:
             assert edge_attr is not None
             edge_attr = self.lin_edge(edge_attr).view(-1, self.heads,
                                                       self.out_channels)
-            key_j += edge_attr
+            key += edge_attr
 
-        alpha = (query_i * key_j).sum(dim=-1) / math.sqrt(self.out_channels)
+        alpha = (query * key).sum(dim=-1) / math.sqrt(self.out_channels)
         alpha = softmax(alpha, index, ptr, size_i)
         self._alpha = alpha
         alpha = F.dropout(alpha, p=self.dropout, training=self.training)
 
-        out = value_j
+        out = self.lin_value(x_j).view(-1, self.heads, self.out_channels)
         if edge_attr is not None:
             out += edge_attr
 
         out *= alpha.view(-1, self.heads, 1)
         return out
 
-    def __repr__(self) -> str:
-        return (f'{self.__class__.__name__}({self.in_channels}, '
-                f'{self.out_channels}, heads={self.heads})')
+    def __repr__(self):
+        return '{}({}, {}, heads={})'.format(self.__class__.__name__,
+                                             self.in_channels,
+                                             self.out_channels, self.heads)

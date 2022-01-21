@@ -138,3 +138,5 @@ results/*
 *.tgz
 apex/
 storage/
+*.egg
+*.egg-info

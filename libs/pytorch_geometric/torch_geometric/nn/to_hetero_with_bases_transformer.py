@@ -9,14 +9,13 @@ from torch import Tensor
 from torch.nn import Module, Parameter
 from torch_sparse import SparseTensor
 
-from torch_geometric.nn.dense import Linear
 from torch_geometric.nn.fx import Transformer
 from torch_geometric.nn.conv import MessagePassing
-from torch_geometric.utils.hetero import get_unused_node_types
+from torch_geometric.nn.dense import Linear
 
 try:
     from torch.fx import GraphModule, Graph, Node
-except (ImportError, ModuleNotFoundError, AttributeError):
+except (ImportError, ModuleNotFoundError):
     GraphModule, Graph, Node = 'GraphModule', 'Graph', 'Node'
 
 
@@ -145,15 +144,6 @@ class ToHeteroWithBasesTransformer(Transformer):
         debug: bool = False,
     ):
         super().__init__(module, input_map, debug)
-
-        unused_node_types = get_unused_node_types(*metadata)
-        if len(unused_node_types) > 0:
-            warnings.warn(
-                f"There exist node types ({unused_node_types}) whose "
-                f"representations do not get updated during message passing "
-                f"as they do not occur as destination type in any edge type. "
-                f"This may lead to unexpected behaviour.")
-
         self.metadata = metadata
         self.num_bases = num_bases
         self.in_channels = in_channels or {}

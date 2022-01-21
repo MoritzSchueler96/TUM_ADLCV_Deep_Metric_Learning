@@ -3,8 +3,7 @@ import os.path as osp
 import errno
 
 
-def makedirs(path: str):
-    r"""Recursive directory creation function."""
+def makedirs(path):
     try:
         os.makedirs(osp.expanduser(osp.normpath(path)))
     except OSError as e:

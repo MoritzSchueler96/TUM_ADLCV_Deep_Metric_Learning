@@ -34,22 +34,6 @@ class PPI(InMemoryDataset):
             :obj:`torch_geometric.data.Data` object and returns a boolean
             value, indicating whether the data object should be included in the
             final dataset. (default: :obj:`None`)
-
-    Stats:
-        .. list-table::
-            :widths: 10 10 10 10 10
-            :header-rows: 1
-
-            * - #graphs
-              - #nodes
-              - #edges
-              - #features
-              - #tasks
-            * - 20
-              - ~2,245.3
-              - ~61,318.4
-              - 50
-              - 121
     """
 
     url = 'https://data.dgl.ai/dataset/ppi.zip'
@@ -59,7 +43,7 @@ class PPI(InMemoryDataset):
 
         assert split in ['train', 'val', 'test']
 
-        super().__init__(root, transform, pre_transform, pre_filter)
+        super(PPI, self).__init__(root, transform, pre_transform, pre_filter)
 
         if split == 'train':
             self.data, self.slices = torch.load(self.processed_paths[0])
@@ -72,7 +56,7 @@ class PPI(InMemoryDataset):
     def raw_file_names(self):
         splits = ['train', 'valid', 'test']
         files = ['feats.npy', 'graph_id.npy', 'graph.json', 'labels.npy']
-        return [f'{split}_{name}' for split, name in product(splits, files)]
+        return ['{}_{}'.format(s, f) for s, f in product(splits, files)]
 
     @property
     def processed_file_names(self):
@@ -88,18 +72,18 @@ class PPI(InMemoryDataset):
         from networkx.readwrite import json_graph
 
         for s, split in enumerate(['train', 'valid', 'test']):
-            path = osp.join(self.raw_dir, f'{split}_graph.json')
+            path = osp.join(self.raw_dir, '{}_graph.json').format(split)
             with open(path, 'r') as f:
                 G = nx.DiGraph(json_graph.node_link_graph(json.load(f)))
 
-            x = np.load(osp.join(self.raw_dir, f'{split}_feats.npy'))
+            x = np.load(osp.join(self.raw_dir, '{}_feats.npy').format(split))
             x = torch.from_numpy(x).to(torch.float)
 
-            y = np.load(osp.join(self.raw_dir, f'{split}_labels.npy'))
+            y = np.load(osp.join(self.raw_dir, '{}_labels.npy').format(split))
             y = torch.from_numpy(y).to(torch.float)
 
             data_list = []
-            path = osp.join(self.raw_dir, f'{split}_graph_id.npy')
+            path = osp.join(self.raw_dir, '{}_graph_id.npy').format(split)
             idx = torch.from_numpy(np.load(path)).to(torch.long)
             idx = idx - idx.min()
 

@@ -11,7 +11,6 @@ import numpy as np
 from torch import Tensor
 from torch_sparse import SparseTensor
 
-from torch_geometric.utils import subgraph
 from torch_geometric.data.storage import (BaseStorage, NodeStorage,
                                           EdgeStorage, GlobalStorage)
 
@@ -186,6 +185,10 @@ class BaseData(object):
         r"""Returns :obj:`True` if graph edges are directed."""
         return not self.is_undirected()
 
+    def clone(self):
+        r"""Performs a deep-copy of the data object."""
+        return copy.deepcopy(self)
+
     def apply_(self, func: Callable, *args: List[str]):
         r"""Applies the in-place function :obj:`func`, either to all attributes
         or only the ones given in :obj:`*args`."""
@@ -199,11 +202,6 @@ class BaseData(object):
         for store in self.stores:
             store.apply(func, *args)
         return self
-
-    def clone(self, *args: List[str]):
-        r"""Performs cloning of tensors, either for all attributes or only the
-        ones given in :obj:`*args`."""
-        return copy.copy(self).apply(lambda x: x.clone(), *args)
 
     def contiguous(self, *args: List[str]):
         r"""Ensures a contiguous memory layout, either for all attributes or
@@ -263,16 +261,6 @@ class BaseData(object):
         until all current work queued on :obj:`stream` has been completed,
         either for all attributes or only the ones given in :obj:`*args`."""
         return self.apply_(lambda x: x.record_stream(stream), *args)
-
-    @property
-    def is_cuda(self) -> bool:
-        r"""Returns :obj:`True` if any :class:`torch.Tensor` attribute is
-        stored on the GPU, :obj:`False` otherwise."""
-        for store in self.stores:
-            for value in store.values():
-                if isinstance(value, Tensor) and value.is_cuda:
-                    return True
-        return False
 
     # Deprecated functions ####################################################
 
@@ -339,16 +327,11 @@ class Data(BaseData):
         super().__init__()
         self.__dict__['_store'] = GlobalStorage(_parent=self)
 
-        if x is not None:
-            self.x = x
-        if edge_index is not None:
-            self.edge_index = edge_index
-        if edge_attr is not None:
-            self.edge_attr = edge_attr
-        if y is not None:
-            self.y = y
-        if pos is not None:
-            self.pos = pos
+        self.x = x
+        self.edge_index = edge_index
+        self.edge_attr = edge_attr
+        self.y = y
+        self.pos = pos
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -399,12 +382,10 @@ class Data(BaseData):
 
         if not has_dict:
             info = [size_repr(k, v) for k, v in self._store.items()]
-            info = ', '.join(info)
-            return f'{cls}({info})'
+            return '{}({})'.format(cls, ', '.join(info))
         else:
             info = [size_repr(k, v, indent=2) for k, v in self._store.items()]
-            info = ',\n'.join(info)
-            return f'{cls}(\n{info}\n)'
+            return '{}(\n{}\n)'.format(cls, ',\n'.join(info))
 
     def stores_as(self, data: 'Data'):
         return self
@@ -449,44 +430,32 @@ class Data(BaseData):
     def is_node_attr(self, key: str) -> bool:
         r"""Returns :obj:`True` if the object at key :obj:`key` denotes a
         node-level attribute."""
-        return self._store.is_node_attr(key)
+        value = self[key]
+        cat_dim = self.__cat_dim__(key, value, self._store)
+
+        num_nodes, num_edges = self.num_nodes, self.num_edges
+        if not isinstance(value, torch.Tensor):
+            return False
+        if value.size(cat_dim) != num_nodes:
+            return False
+        if num_nodes != num_edges:
+            return True
+        return 'edge' not in key
 
     def is_edge_attr(self, key: str) -> bool:
         r"""Returns :obj:`True` if the object at key :obj:`key` denotes an
         edge-level attribute."""
-        return self._store.is_edge_attr(key)
+        value = self[key]
+        cat_dim = self.__cat_dim__(key, value, self._store)
 
-    def subgraph(self, subset: Tensor):
-        r"""Returns the induced subgraph given by the node indices
-        :obj:`subset`.
-
-        Args:
-            subset (LongTensor or BoolTensor): The nodes to keep.
-        """
-
-        out = subgraph(subset, self.edge_index, relabel_nodes=True,
-                       num_nodes=self.num_nodes, return_edge_mask=True)
-        edge_index, _, edge_mask = out
-
-        if subset.dtype == torch.bool:
-            num_nodes = int(subset.sum())
-        else:
-            num_nodes = subset.size(0)
-
-        data = copy.copy(self)
-
-        for key, value in data:
-            if key == 'edge_index':
-                data.edge_index = edge_index
-            elif key == 'num_nodes':
-                data.num_nodes = num_nodes
-            elif isinstance(value, Tensor):
-                if self.is_node_attr(key):
-                    data[key] = value[subset]
-                elif self.is_edge_attr(key):
-                    data[key] = value[edge_mask]
-
-        return data
+        num_nodes, num_edges = self.num_nodes, self.num_edges
+        if not isinstance(value, torch.Tensor):
+            return False
+        if value.size(cat_dim) != num_edges:
+            return False
+        if num_nodes != num_edges:
+            return True
+        return 'edge' in key
 
     def to_heterogeneous(self, node_type: Optional[Tensor] = None,
                          edge_type: Optional[Tensor] = None,
@@ -647,10 +616,6 @@ class Data(BaseData):
         return self['edge_index'] if 'edge_index' in self._store else None
 
     @property
-    def edge_weight(self) -> Any:
-        return self['edge_weight'] if 'edge_weight' in self._store else None
-
-    @property
     def edge_attr(self) -> Any:
         return self['edge_attr'] if 'edge_attr' in self._store else None
 
@@ -672,7 +637,7 @@ class Data(BaseData):
     @deprecated(details="use 'data.face.size(-1)' instead")
     def num_faces(self) -> Optional[int]:
         r"""Returns the number of faces in the mesh."""
-        if 'face' in self._store and isinstance(self.face, Tensor):
+        if 'face' in self._store and isinstance(self.face, torch.Tensor):
             return self.face.size(self.__cat_dim__('face', self.face))
         return None
 
@@ -682,9 +647,9 @@ class Data(BaseData):
 
 def size_repr(key: Any, value: Any, indent: int = 0) -> str:
     pad = ' ' * indent
-    if isinstance(value, Tensor) and value.dim() == 0:
+    if isinstance(value, torch.Tensor) and value.dim() == 0:
         out = value.item()
-    elif isinstance(value, Tensor):
+    elif isinstance(value, torch.Tensor):
         out = str(list(value.size()))
     elif isinstance(value, np.ndarray):
         out = str(list(value.shape))

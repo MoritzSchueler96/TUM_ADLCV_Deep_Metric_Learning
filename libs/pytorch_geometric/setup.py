@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-__version__ = '2.0.4'
+__version__ = '2.0.2'
 URL = 'https://github.com/pyg-team/pytorch_geometric'
 
 install_requires = [
@@ -19,7 +19,6 @@ install_requires = [
     'PyYAML',
 ]
 tests_require = ['pytest', 'pytest-cov', 'mock']
-dev_requires = tests_require + ['pre-commit']
 
 setup(
     name='torch_geometric',
@@ -40,7 +39,6 @@ setup(
     install_requires=install_requires,
     extras_require={
         'test': tests_require,
-        'dev': dev_requires,
     },
     packages=find_packages(),
     include_package_data=True,
