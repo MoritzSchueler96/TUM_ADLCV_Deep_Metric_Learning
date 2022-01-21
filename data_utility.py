@@ -8,6 +8,8 @@ import matplotlib.pyplot as plt
 import logging
 import copy
 
+from utils.utils import seed_worker
+
 logger = logging.getLogger('GNNReID.DataUtility')
 
 
@@ -55,6 +57,9 @@ def get_train_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
                             batch_sampler=bssampling)
     drop_last = True
 
+    g = torch.Generator()
+    g.manual_seed(0)
+
     dl_tr = torch.utils.data.DataLoader(
         Dataset,
         batch_size=size_batch,
@@ -62,7 +67,9 @@ def get_train_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
         sampler=sampler,
         num_workers=num_workers,
         drop_last=drop_last,
-        pin_memory=True)
+        pin_memory=True,
+        worker_init_fn=seed_worker,
+        generator=g)
     
     return dl_tr
 
@@ -83,6 +90,9 @@ def get_val_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
         eval_reid=True,
         net_type=net_type)
 
+    g = torch.Generator()
+    g.manual_seed(0)
+
     if 'gnn' in mode.split('_'):
         
         list_of_indices_for_each_class = get_list_of_inds(dataset_ev)
@@ -94,7 +104,9 @@ def get_val_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
             batch_size=50,
             shuffle=False,
             num_workers=1,
-            pin_memory=True)
+            pin_memory=True,
+            worker_init_fn=seed_worker,
+            generator=g)
 
         dl_ev_gnn = torch.utils.data.DataLoader(
             dataset_ev,
@@ -103,7 +115,9 @@ def get_val_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
             sampler=sampler,
             num_workers=num_workers,
             drop_last=True,
-            pin_memory=True)
+            pin_memory=True,
+            worker_init_fn=seed_worker,
+            generator=g)
 
     elif 'pseudo' in mode.split('_'):
         
@@ -116,14 +130,18 @@ def get_val_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
             sampler=sampler,
             num_workers=1,
             drop_last=True,
-            pin_memory=True)
+            pin_memory=True,
+            worker_init_fn=seed_worker,
+            generator=g)
 
         dl_ev = torch.utils.data.DataLoader(
             copy.deepcopy(dataset_ev),
             batch_size=64,
             shuffle=False,
             num_workers=1,
-            pin_memory=True)
+            pin_memory=True,
+            worker_init_fn=seed_worker,
+            generator=g)
 
     else:
         dl_ev = torch.utils.data.DataLoader(
@@ -131,7 +149,9 @@ def get_val_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
             batch_size=50,
             shuffle=False,
             num_workers=1,
-            pin_memory=True
+            pin_memory=True,
+            worker_init_fn=seed_worker,
+            generator=g
         )
 
         dl_ev_gnn = None
@@ -141,6 +161,9 @@ def get_val_loaders(data_root, num_workers, size_batch, num_classes_iter=None,
 
 def get_inshop_val_loader(data_root, num_workers, trans='norm', 
         num_classes=None, net_type='resnet50', mode='train'):
+
+    g = torch.Generator()
+    g.manual_seed(0)
 
     query_dataset = dataset.Inshop_Dataset(
             root = data_root,
@@ -154,7 +177,9 @@ def get_inshop_val_loader(data_root, num_workers, trans='norm',
             batch_size = 150,
             shuffle = False,
             num_workers = 4,
-            pin_memory = True)
+            pin_memory = True,
+            worker_init_fn=seed_worker,
+            generator=g)
     
     gallery_dataset = dataset.Inshop_Dataset(
                 root = data_root,
@@ -168,7 +193,9 @@ def get_inshop_val_loader(data_root, num_workers, trans='norm',
             batch_size = 150,
             shuffle = False,
             num_workers = 4,
-            pin_memory = True)
+            pin_memory = True,
+            worker_init_fn=seed_worker,
+            generator=g)
 
     if 'pseudo' in mode.split('_'):
         import copy
@@ -185,7 +212,9 @@ def get_inshop_val_loader(data_root, num_workers, trans='norm',
             batch_size = 4,
             shuffle = False,
             num_workers = 4,
-            pin_memory = True)
+            pin_memory = True,
+            worker_init_fn=seed_worker,
+            generator=g)
     else:
         dl_ev_gnn = None    
     
