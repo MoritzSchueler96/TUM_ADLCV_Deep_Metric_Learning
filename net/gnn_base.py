@@ -174,6 +174,7 @@ class DotAttentionLayer(nn.Module):
                     n_classes=embed_dim,
                     n_heads=params["num_heads"],
                     dropout=params["dropout_gat"],
+                    use_torch_geometric=False,
                 )
             elif self.att == "gat2":
                 self.att = GATv2(
@@ -183,27 +184,28 @@ class DotAttentionLayer(nn.Module):
                     n_classes=embed_dim,
                     n_heads=params["num_heads"],
                     dropout=params["dropout_gat"],
+                    use_torch_geometric=False,
                 )
             elif self.att == "gat3":
-                self.att = GATConv(
-                    in_channels=embed_dim,
-                    out_channels=embed_dim,
-                    heads=params["num_heads"],
-                    concat=False,
+                self.att = GAT(
+                    dev=self.dev,
+                    in_features=embed_dim,
+                    n_hidden=embed_dim,
+                    n_classes=embed_dim,
+                    n_heads=params["num_heads"],
                     dropout=params["dropout_gat"],
-                    add_self_loops=False,
-                    edge_dim=1,
+                    use_torch_geometric=False,
                 )
 
             elif self.att == "gat4":
-                self.att = GATv2Conv(
-                    in_channels=embed_dim,
-                    out_channels=embed_dim,
-                    heads=params["num_heads"],
-                    concat=False,
+                self.att = GATv2(
+                    dev=self.dev,
+                    in_features=embed_dim,
+                    n_hidden=embed_dim,
+                    n_classes=embed_dim,
+                    n_heads=params["num_heads"],
                     dropout=params["dropout_gat"],
-                    add_self_loops=False,
-                    edge_dim=1,
+                    use_torch_geometric=False,
                 )
             else:
                 self.att = MultiHeadDotProduct(self.dev, embed_dim, num_heads, params["aggregator"], mult_attr=params["mult_attr"]).to(dev)
@@ -366,7 +368,7 @@ class GAT(nn.Module):
     """
 
     def __init__(
-        self, dev, in_features: int, n_hidden: int, n_classes: int, n_heads: int, dropout: float,
+        self, dev, in_features: int, n_hidden: int, n_classes: int, n_heads: int, dropout: float, use_torch_geometric: bool = False,
     ):
         """
         * `in_features` is the number of features per node
@@ -378,12 +380,33 @@ class GAT(nn.Module):
         super().__init__()
         self.dev = dev
 
-        # First graph attention layer where we concatenate the heads
-        self.layer1 = GraphAttentionLayer(self.dev, in_features, n_hidden, n_heads, is_concat=True, dropout=dropout)
+        if use_torch_geometric:
+            # First graph attention layer where we concatenate the heads
+            self.layer1 = GATConv(
+                    in_channels=in_features,
+                    out_channels=n_hidden,
+                    heads=n_heads,
+                    concat=True,
+                    dropout=dropout,
+                    add_self_loops=False,
+                    edge_dim=1,)
+            # Final graph attention layer where we average the heads
+            self.output = GATConv(
+                    in_channels=n_hidden,
+                    out_channels=n_classes,
+                    heads=1,
+                    concat=False,
+                    dropout=dropout,
+                    add_self_loops=False,
+                    edge_dim=1,)
+        else:
+            # First graph attention layer where we concatenate the heads
+            self.layer1 = GraphAttentionLayer(self.dev, in_features, n_hidden, n_heads, is_concat=True, dropout=dropout)
+            # Final graph attention layer where we average the heads
+            self.output = GraphAttentionLayer(self.dev, n_hidden, n_classes, 1, is_concat=False, dropout=dropout)
+
         # Activation function after first graph attention layer
         self.activation = nn.ELU()
-        # Final graph attention layer where we average the heads
-        self.output = GraphAttentionLayer(self.dev, n_hidden, n_classes, 1, is_concat=False, dropout=dropout)
         # Dropout
         self.dropout = nn.Dropout(dropout)
 
@@ -527,7 +550,7 @@ class GATv2(nn.Module):
     """
 
     def __init__(
-        self, dev, in_features: int, n_hidden: int, n_classes: int, n_heads: int, dropout: float, share_weights: bool = True,
+        self, dev, in_features: int, n_hidden: int, n_classes: int, n_heads: int, dropout: float, share_weights: bool = True, use_torch_geometric: bool = False,
     ):
         """
         * `in_features` is the number of features per node
@@ -540,16 +563,40 @@ class GATv2(nn.Module):
         super().__init__()
         self.dev = dev
 
-        # First graph attention layer where we concatenate the heads
-        self.layer1 = GraphAttentionV2Layer(
-            self.dev, in_features, n_hidden, n_heads, is_concat=True, dropout=dropout, share_weights=share_weights,
-        )
+        if use_torch_geometric:
+            # First graph attention layer where we concatenate the heads
+            self.layer1 = GATv2Conv(
+                    in_channels=in_features,
+                    out_channels=n_hidden,
+                    heads=n_heads,
+                    concat=True,
+                    dropout=dropout,
+                    add_self_loops=False,
+                    edge_dim=1,
+                    share_weights=share_weights,
+            )
+            # Final graph attention layer where we average the heads
+            self.output = GATv2Conv(
+                    in_channels=n_hidden,
+                    out_channels=n_classes,
+                    heads=1,
+                    concat=False,
+                    dropout=dropout,
+                    add_self_loops=False,
+                    edge_dim=1,
+                    share_weights=share_weights,
+            )
+        else:
+            # First graph attention layer where we concatenate the heads
+            self.layer1 = GraphAttentionV2Layer(
+                self.dev, in_features, n_hidden, n_heads, is_concat=True, dropout=dropout, share_weights=share_weights,
+            )
+            # Final graph attention layer where we average the heads
+            self.output = GraphAttentionV2Layer(
+                self.dev, n_hidden, n_classes, 1, is_concat=False, dropout=dropout, share_weights=share_weights,
+            )
         # Activation function after first graph attention layer
         self.activation = nn.ELU()
-        # Final graph attention layer where we average the heads
-        self.output = GraphAttentionV2Layer(
-            self.dev, n_hidden, n_classes, 1, is_concat=False, dropout=dropout, share_weights=share_weights,
-        )
         # Dropout
         self.dropout = nn.Dropout(dropout)
 
