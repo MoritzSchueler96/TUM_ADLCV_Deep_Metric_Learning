@@ -18,9 +18,18 @@ import sklearn.metrics.cluster
 import os
 import time
 from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
+from sklearn.neighbors import NearestNeighbors
 
 logger = logging.getLogger("GNNReID.Evaluator")
 
+
+def knn_func(query, num_k, reference, embeddings_come_from_same_source):
+    neigh = NearestNeighbors(n_neighbors=num_k)
+    neigh.fit(query)
+    D, I = neigh.kneighbors(reference)
+    if embeddings_come_from_same_source:
+        return D[:, 1:], I[:, 1:]
+    return D, I
 
 class Evaluator_DML:
     def __init__(self, output_test_enc="norm", output_test_gnn="norm", cat=0, nb_clusters=0, dev=0, metric="recall"):
@@ -38,8 +47,8 @@ class Evaluator_DML:
                     k=None,
                     label_comparison_fn=None,
                     device=dev,
-                    knn_func=None,
-                    kmeans_func=None)
+                    knn_func=knn_func,
+                    kmeans_func=cluster_by_kmeans)
 
     def evaluate(
         self,
@@ -65,7 +74,7 @@ class Evaluator_DML:
         X, T, P = self.predict_batchwise(model, dataloader)
 
         print("Metric Dict Start")
-        metric_dict_start = self.metric_calculator.get_accuracy(X, T, X, T, True)
+        metric_dict_start = self.metric_calculator.get_accuracy(X, X, T, T, True)
         print(metric_dict_start)
         if dataroot == "in_shop":
             gallery_X, gallery_T, gallery_P = self.predict_batchwise(model, gallery_dl)
@@ -128,7 +137,7 @@ class Evaluator_DML:
 
         # get several metrics
         print("Metric Dict")
-        metric_dict = self.metric_calculator.get_accuracy(X, T, X, T, True)
+        metric_dict = self.metric_calculator.get_accuracy(X, X, T, T, True)
         print(metric_dict)
 
         model.train(model_is_training)  # revert to previous training state
