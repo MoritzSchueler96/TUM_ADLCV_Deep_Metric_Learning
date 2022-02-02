@@ -17,6 +17,7 @@ import sklearn.cluster
 import sklearn.metrics.cluster
 import os
 import time
+from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
 
 logger = logging.getLogger("GNNReID.Evaluator")
 
@@ -30,6 +31,15 @@ class Evaluator_DML:
         self.cat = cat
         self.dev = dev
         self.metric = metric
+        self.metric_calculator = AccuracyCalculator(include=(),
+                    exclude=(),
+                    avg_of_avgs=False,
+                    return_per_class=False,
+                    k=None,
+                    label_comparison_fn=None,
+                    device=dev,
+                    knn_func=None,
+                    kmeans_func=None)
 
     def evaluate(
         self,
@@ -53,6 +63,10 @@ class Evaluator_DML:
 
         # calculate embeddings with model, also get labels (non-batch-wise)
         X, T, P = self.predict_batchwise(model, dataloader)
+
+        print("Metric Dict Start")
+        metric_dict_start = self.metric_calculator.get_accuracy(X, T, X, T, True)
+        print(metric_dict_start)
         if dataroot == "in_shop":
             gallery_X, gallery_T, gallery_P = self.predict_batchwise(model, gallery_dl)
 
@@ -111,6 +125,11 @@ class Evaluator_DML:
         else:
             map = calc_map_InShop(T, Y)
             logger.info("Map@R : {:.3f}".format(100 * map))
+
+        # get several metrics
+        print("Metric Dict")
+        metric_dict = self.metric_calculator.get_accuracy(X, T, X, T, True)
+        print(metric_dict)
 
         model.train(model_is_training)  # revert to previous training state
         return nmi, recall, map
