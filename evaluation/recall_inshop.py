@@ -38,6 +38,15 @@ def calc_recall_at_k_InShop(cos_sim, query_T, gallery_T, k):
         return match_counter / m
 
 
+def calc_map_InShop(query_T, gallery_T):
+    """
+    T : [nb_samples] (target labels)
+    Y : [nb_samples x k] (k predicted labels/neighbours)
+    return : mean average precision
+    """
+    return 1.0
+
+
 def l2_norm(input):
     input_size = input.size()
     buffer = torch.pow(input, 2)

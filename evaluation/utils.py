@@ -3,8 +3,10 @@ from . import (
     cluster_by_kmeans,
     assign_by_euclidian_at_k,
     calc_recall_at_k,
+    calc_map,
     assign_by_cos_sim_InSop,
     calc_recall_at_k_InShop,
+    calc_map_InShop,
     assign_by_euclidean_at_k_InShop,
 )
 import torch
@@ -20,13 +22,14 @@ logger = logging.getLogger("GNNReID.Evaluator")
 
 
 class Evaluator_DML:
-    def __init__(self, output_test_enc="norm", output_test_gnn="norm", cat=0, nb_clusters=0, dev=0):
+    def __init__(self, output_test_enc="norm", output_test_gnn="norm", cat=0, nb_clusters=0, dev=0, metric="recall"):
 
         self.nb_clusters = nb_clusters
         self.output_test_enc = output_test_enc
         self.output_test_gnn = output_test_gnn
         self.cat = cat
         self.dev = dev
+        self.metric = metric
 
     def evaluate(
         self,
@@ -101,8 +104,16 @@ class Evaluator_DML:
                 recall.append(r_at_k)
                 logger.info("R@{} : {:.3f}".format(k, 100 * r_at_k))
 
+        # get map@R
+        if dataroot != "in_shop":
+            map = calc_map(T, Y)
+            logger.info("Map@R : {:.3f}".format(100 * map))
+        else:
+            map = calc_map_InShop(T, Y)
+            logger.info("Map@R : {:.3f}".format(100 * map))
+
         model.train(model_is_training)  # revert to previous training state
-        return nmi, recall
+        return nmi, recall, map
 
     # just looking at this gives me AIDS, fix it fool!
     def predict_batchwise(self, model, dataloader):

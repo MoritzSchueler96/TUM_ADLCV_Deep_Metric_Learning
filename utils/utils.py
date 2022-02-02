@@ -14,6 +14,7 @@ def set_seeds(seed: int):
     # For reproducibility
     random.seed(seed)
     np.random.seed(seed)
+    rng = np.random.default_rng(seed)
     os.environ["PYTHONHASHSEED"] = f"{seed}"
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     torch.manual_seed(seed)

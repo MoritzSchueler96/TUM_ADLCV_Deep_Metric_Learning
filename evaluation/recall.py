@@ -1,4 +1,5 @@
 import torch
+import torch.functional as F
 import numpy as np
 import sklearn.metrics.pairwise
 
@@ -40,6 +41,28 @@ def calc_recall_at_k(T, Y, k):
     s = sum([1 for t, y in zip(T, Y) if t in y[:k]])
     return s / (1. * len(T))
 
+
+def calc_map(T, Y):
+    """
+    T : [nb_samples] (target labels)
+    Y : [nb_samples x k] (k predicted labels/neighbours)
+    return : mean average precision
+    """
+    # from sklearn.metrics import average_precision_score
+
+    return 1.0
+"""
+from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
+AccuracyCalculator(include=(),
+                    exclude=(),
+                    avg_of_avgs=False,
+                    return_per_class=False,
+                    k=None,
+                    label_comparison_fn=None,
+                    device=None,
+                    knn_func=None,
+                    kmeans_func=None)
+"""
 
 def assign_by_cos_sim(X, T, k):
     cos_sim = F.linear(X, X)

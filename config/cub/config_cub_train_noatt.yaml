@@ -83,7 +83,8 @@ eval_params:
   cat: 0
   output_test_enc: "plain"
   output_test_gnn: "plain"
-  
+  # possible choices: recall, nmi, map
+  metric: "recall"
   
 
 

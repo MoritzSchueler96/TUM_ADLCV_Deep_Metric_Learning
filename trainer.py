@@ -70,7 +70,7 @@ class Trainer:
         self.net_type = self.config["models"]["encoder_params"]["net_type"]
         self.dataset_short = self.config["dataset"]["dataset_short"]
 
-        self.best_recall = 0
+        self.best_metric = 0
         self.best_hypers = None
         self.num_iter = 30 if "hyper" in config["mode"].split("_") else 1
 
@@ -99,7 +99,7 @@ class Trainer:
         # config_types(self.config)
 
     def train(self):
-        best_recall = 0
+        best_metric = 0
 
         for i in range(self.num_iter):
             logger.info("Search iter {}/{}\n{}\n{}".format(i + 1, self.num_iter, self.config, self.timer))
@@ -146,46 +146,46 @@ class Trainer:
 
             self.get_data(self.config["dataset"], self.config["train_params"], self.config["mode"])
 
-            best_recall_iter, model = self.execute(self.config["train_params"], self.config["eval_params"])
+            best_metric_iter, model = self.execute(self.config["train_params"], self.config["eval_params"])
 
             hypers = ", ".join([k + ": " + str(v) for k, v in self.config.items()])
             logger.info("Used Parameters: " + hypers)
 
-            logger.info("Best Recall: {}".format(best_recall_iter))
+            logger.info("Best {}: {}".format(self.config["eval_params"]["metric"], best_metric_iter))
 
-            if best_recall_iter > best_recall and not "test" in self.config["mode"].split("_"):
+            if best_metric_iter > best_metric and not "test" in self.config["mode"].split("_"):
                 os.rename(
                     osp.join(self.save_folder_nets, self.fn + ".pth"),
                     osp.join(
-                        self.save_folder_nets_final, str(best_recall_iter) + mode + self.net_type + "_" + self.dataset_short + ".pth",
+                        self.save_folder_nets_final, str(best_metric_iter) + mode + self.net_type + "_" + self.dataset_short + ".pth",
                     ),
                 )
                 os.rename(
                     osp.join(self.save_folder_nets, "gnn_" + self.fn + ".pth"),
                     osp.join(
                         self.save_folder_nets_final,
-                        str(best_recall_iter) + "gnn_" + mode + self.net_type + "_" + self.dataset_short + ".pth",
+                        str(best_metric_iter) + "gnn_" + mode + self.net_type + "_" + self.dataset_short + ".pth",
                     ),
                 )
-                best_recall = best_recall_iter
+                best_metric = best_metric_iter
             elif "test" in self.config["mode"].split("_"):
-                best_recall = best_recall_iter
+                best_metric = best_metric_iter
 
             best_hypers = ", ".join([str(k) + ": " + str(v) for k, v in self.config.items()])
 
         logger.info("Best Hyperparameters found: " + best_hypers)
-        logger.info("Achieved {} with this hyperparameters".format(best_recall))
+        logger.info("Achieved {} with this hyperparameters".format(best_metric))
         logger.info("-----------------------------------------------------\n")
 
     def execute(self, train_params, eval_params):
         since = time.time()
-        best_recall_iter = 0
+        best_metric_iter = 0
         scores = list()
         # self.comp_list = list()
         # self.comp_list_mean = list()
         for e in range(1, train_params["num_epochs"] + 1):
             if "test" in self.config["mode"].split("_"):
-                best_recall_iter = self.evaluate(eval_params, scores, 0, 0)
+                best_metric_iter = self.evaluate(eval_params, scores, 0, 0)
             # If not testing
             else:
                 logger.info("Epoch {}/{}".format(e, train_params["num_epochs"]))
@@ -226,7 +226,7 @@ class Trainer:
                             param.grad.data *= 1.0 / self.config["train_params"]["loss_fn"]["scaling_center"]
                         self.opt_center.step()
 
-                best_recall_iter = self.evaluate(eval_params, scores, e, best_recall_iter)
+                best_metric_iter = self.evaluate(eval_params, scores, e, best_metric_iter)
 
             # compute epoch loss mean
             [self.losses_mean[k].append(sum(v) / len(v)) for k, v in self.losses.items()]
@@ -237,9 +237,9 @@ class Trainer:
 
         end = time.time()
 
-        self.save_results(train_params, since, end, best_recall_iter, scores)
+        self.save_results(train_params, since, end, best_metric_iter, scores)
 
-        return best_recall_iter, self.encoder
+        return best_metric_iter, self.encoder
 
     def forward_pass(self, x, Y, I, P, train_params):
         Y = Y.to(self.device)
@@ -320,12 +320,12 @@ class Trainer:
 
         return loss
 
-    def evaluate(self, eval_params, scores, e, best_recall_iter):
+    def evaluate(self, eval_params, scores, e, best_metric_iter):
         if not self.config["mode"] == "pretraining":
             with torch.no_grad():
                 logger.info("EVALUATION")
                 if self.config["mode"] == "train" or self.config["mode"] == "test":
-                    nmi, top = self.evaluator.evaluate(
+                    nmi, recall, map = self.evaluator.evaluate(
                         self.encoder,
                         self.dl_ev,
                         self.gallery_dl,
@@ -334,7 +334,7 @@ class Trainer:
                         nb_classes=self.config["dataset"]["num_classes"],
                     )
                 else:  # all other modes that involve gnn during test time
-                    nmi, top = self.evaluator.evaluate(
+                    nmi, recall, map = self.evaluator.evaluate(
                         self.encoder,
                         self.dl_ev,
                         self.gallery_dl,
@@ -346,12 +346,17 @@ class Trainer:
                         nb_classes=self.config["dataset"]["num_classes"],
                     )
 
-                scores.append((nmi, top))
-                recall = top[0]
+                scores.append((nmi, recall, map))
+                if "recall" in eval_params["metric"]:
+                    metric = recall[0]
+                elif "nmi" in eval_params["metric"]:
+                    metric = nmi
+                else:
+                    metric = map
 
                 self.encoder.current_epoch = e
-                if recall > best_recall_iter:
-                    best_recall_iter = recall
+                if metric > best_metric_iter:
+                    best_metric_iter = metric
                     if "test" not in self.config["mode"].split("_"):
                         torch.save(self.encoder.state_dict(), osp.join(self.save_folder_nets, self.fn + ".pth"))
                         torch.save(self.gnn.state_dict(), osp.join(self.save_folder_nets, "gnn_" + self.fn + ".pth"))
@@ -362,16 +367,16 @@ class Trainer:
             scores.append(self.running_corrects / self.denom)
             self.denom = 0
             self.running_corrects = 0
-            if scores[-1] > best_recall_iter:
-                best_recall_iter = scores[-1]
+            if scores[-1] > best_metric_iter:
+                best_metric_iter = scores[-1]
                 torch.save(self.encoder.state_dict(), osp.join(self.save_folder_nets, self.fn + ".pth"))
 
-        return best_recall_iter
+        return best_metric_iter
 
-    def save_results(self, train_params, since, end, best_recall_iter, scores):
+    def save_results(self, train_params, since, end, best_metric_iter, scores):
         logger.info("Completed {} epochs in {}s on {}".format(train_params["num_epochs"], end - since, self.dataset_short))
 
-        file_name = str(best_recall_iter) + "_" + self.dataset_short + "_" + str(self.timer)
+        file_name = str(best_metric_iter) + "_" + self.dataset_short + "_" + str(self.timer)
         if "test" in self.config["mode"].split("_"):
             file_name = "test_" + file_name
 
