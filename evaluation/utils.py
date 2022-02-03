@@ -17,19 +17,60 @@ import sklearn.cluster
 import sklearn.metrics.cluster
 import os
 import time
-from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
+from tqdm import tqdm
+from pytorch_metric_learning.utils import accuracy_calculator
 from sklearn.neighbors import NearestNeighbors
 
 logger = logging.getLogger("GNNReID.Evaluator")
 
+class MetricCalculator(accuracy_calculator.AccuracyCalculator):
+    def calculate_precision_at_2(self, knn_labels, query_labels, **kwargs):
+        return accuracy_calculator.precision_at_k(knn_labels, query_labels[:, None], 2, self.avg_of_avgs,
+            self.return_per_class,
+            self.label_comparison_fn)
+    def calculate_precision_at_4(self, knn_labels, query_labels, **kwargs):
+        return accuracy_calculator.precision_at_k(knn_labels, query_labels[:, None], 4, self.avg_of_avgs,
+            self.return_per_class,
+            self.label_comparison_fn)
+
+    def calculate_precision_at_8(self, knn_labels, query_labels, **kwargs):
+        return accuracy_calculator.precision_at_k(knn_labels, query_labels[:, None], 8, self.avg_of_avgs,
+            self.return_per_class,
+            self.label_comparison_fn)
+
+    def calculate_recall_at_1(self, knn_labels, query_labels, **kwargs):    
+        return self.recall_at_k(knn_labels, query_labels[:, None], 1)
+
+    def calculate_recall_at_2(self, knn_labels, query_labels, **kwargs):    
+        return self.recall_at_k(knn_labels, query_labels[:, None], 2)
+
+    def calculate_recall_at_4(self, knn_labels, query_labels, **kwargs):    
+        return self.recall_at_k(knn_labels, query_labels[:, None], 4)
+
+    def calculate_recall_at_8(self, knn_labels, query_labels, **kwargs):    
+        return self.recall_at_k(knn_labels, query_labels[:, None], 8)
+
+    def recall_at_k(self, knn_labels, query_labels, k):
+        """
+        T : [nb_samples] (target labels)
+        Y : [nb_samples x k] (k predicted labels/neighbours)
+        """
+        s = sum([1 for t, y in zip(query_labels, knn_labels) if t in y[:k]])
+        return s / (1. * len(query_labels))
+
+    def requires_knn(self):
+        return super().requires_knn() + ["precision_at_2"] + ["precision_at_4"] + ["precision_at_8"] + ["recall_at_1"] + ["recall_at_2"] + ["recall_at_4"] + ["recall_at_8"]
 
 def knn_func(query, num_k, reference, embeddings_come_from_same_source):
     neigh = NearestNeighbors(n_neighbors=num_k)
-    neigh.fit(query)
-    D, I = neigh.kneighbors(reference)
+    neigh.fit(query.cpu())
+    D, I = neigh.kneighbors(reference.cpu())
     if embeddings_come_from_same_source:
         return D[:, 1:], I[:, 1:]
     return D, I
+
+def kmeans_func(query, num_clusters):
+    return cluster_by_kmeans(query.cpu(), num_clusters)
 
 class Evaluator_DML:
     def __init__(self, output_test_enc="norm", output_test_gnn="norm", cat=0, nb_clusters=0, dev=0, metric="recall"):
@@ -40,15 +81,16 @@ class Evaluator_DML:
         self.cat = cat
         self.dev = dev
         self.metric = metric
-        self.metric_calculator = AccuracyCalculator(include=(),
+        self.metric_calculator = MetricCalculator(
+                    include=(["NMI", "precision_at_1", "precision_at_2", "precision_at_4", "precision_at_8", "recall_at_1", "recall_at_2", "recall_at_4", "recall_at_8", "mean_average_precision_at_r"]),
                     exclude=(),
                     avg_of_avgs=False,
                     return_per_class=False,
                     k=None,
                     label_comparison_fn=None,
-                    device=dev,
+                    device=self.dev,
                     knn_func=knn_func,
-                    kmeans_func=cluster_by_kmeans)
+                    kmeans_func=kmeans_func)
 
     def evaluate(
         self,
@@ -73,9 +115,6 @@ class Evaluator_DML:
         # calculate embeddings with model, also get labels (non-batch-wise)
         X, T, P = self.predict_batchwise(model, dataloader)
 
-        print("Metric Dict Start")
-        metric_dict_start = self.metric_calculator.get_accuracy(X, X, T, T, True)
-        print(metric_dict_start)
         if dataroot == "in_shop":
             gallery_X, gallery_T, gallery_P = self.predict_batchwise(model, gallery_dl)
 
@@ -127,7 +166,7 @@ class Evaluator_DML:
                 recall.append(r_at_k)
                 logger.info("R@{} : {:.3f}".format(k, 100 * r_at_k))
 
-        # get map@R
+        # get mAP@R
         if dataroot != "in_shop":
             map = calc_map(T, Y)
             logger.info("Map@R : {:.3f}".format(100 * map))
@@ -136,7 +175,6 @@ class Evaluator_DML:
             logger.info("Map@R : {:.3f}".format(100 * map))
 
         # get several metrics
-        print("Metric Dict")
         metric_dict = self.metric_calculator.get_accuracy(X, X, T, T, True)
         print(metric_dict)
 
