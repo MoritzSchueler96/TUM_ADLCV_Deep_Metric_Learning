@@ -131,6 +131,7 @@ dmypy.json
 best_weights/
 data/CARS
 data/CUB_200_2011
+data/
 results_nets_intermediate/
 results_nets/*
 results/*
