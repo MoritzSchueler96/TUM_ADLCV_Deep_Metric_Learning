@@ -347,12 +347,12 @@ class Trainer:
                     )
 
                 scores.append((nmi, recall, map))
-                if "recall" in eval_params["metric"]:
-                    metric = recall[0]
-                elif "nmi" in eval_params["metric"]:
+                if "map" in eval_params["metric"].lower():
+                    metric = map
+                elif "nmi" in eval_params["metric"].lower():
                     metric = nmi
                 else:
-                    metric = map
+                    metric = recall[0]
 
                 self.encoder.current_epoch = e
                 if metric > best_metric_iter:
