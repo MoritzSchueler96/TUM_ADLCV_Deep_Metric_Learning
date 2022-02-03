@@ -169,13 +169,15 @@ class Evaluator_DML:
         # get mAP@R
         if dataroot != "in_shop":
             map = calc_map(T, Y)
-            logger.info("Map@R : {:.3f}".format(100 * map))
+            #logger.info("Map@R : {:.3f}".format(100 * map))
         else:
             map = calc_map_InShop(T, Y)
-            logger.info("Map@R : {:.3f}".format(100 * map))
+            #logger.info("Map@R : {:.3f}".format(100 * map))
 
         # get several metrics
         metric_dict = self.metric_calculator.get_accuracy(X, X, T, T, True)
+        map = metric_dict["mean_average_precision_at_r"]
+        logger.info("mAP@R : {:.3f}".format(100 * map))
         print(metric_dict)
 
         model.train(model_is_training)  # revert to previous training state
