@@ -51,18 +51,7 @@ def calc_map(T, Y):
     # from sklearn.metrics import average_precision_score
 
     return 1.0
-"""
-from pytorch_metric_learning.utils.accuracy_calculator import AccuracyCalculator
-AccuracyCalculator(include=(),
-                    exclude=(),
-                    avg_of_avgs=False,
-                    return_per_class=False,
-                    k=None,
-                    label_comparison_fn=None,
-                    device=None,
-                    knn_func=None,
-                    kmeans_func=None)
-"""
+
 
 def assign_by_cos_sim(X, T, k):
     cos_sim = F.linear(X, X)
