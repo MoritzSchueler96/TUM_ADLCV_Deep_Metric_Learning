@@ -33,7 +33,9 @@ To set up a conda environment containing all used packages, please fist install 
    4.      pip install -r requirements.txt
    5.      cd libs/pytorch_geometric
            pip install -e .
-   6.  (Optional) If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
+   6.      cd libs/pytorch_metric_learning
+           pip install -e .
+   7.  (Optional) If you want to use Apex, please follow the installation instructions on https://github.com/NVIDIA/apex
 
         If you use Google Cloud Platform use the Python only version
 
