@@ -388,7 +388,7 @@ class Trainer:
                 fp.write(file_name + "\n")
                 fp.write(str(self.config))
                 fp.write("\n")
-                fp.write("\n".join("%s %s" % x for x in scores))
+                fp.write("\n".join("%s %s %s" % x for x in scores))
                 fp.write("\n\n\n")
 
         # plot losses and scores
