@@ -82,7 +82,7 @@ class Evaluator_DML:
         self.dev = dev
         self.metric = metric
         self.metric_calculator = MetricCalculator(
-                    include=(["NMI", "precision_at_1", "precision_at_2", "precision_at_4", "precision_at_8", "recall_at_1", "recall_at_2", "recall_at_4", "recall_at_8", "mean_average_precision_at_r"]),
+                    include=(["NMI", "precision_at_1", "precision_at_2", "precision_at_4", "precision_at_8", "recall_at_1", "recall_at_2", "recall_at_4", "recall_at_8", "mean_average_precision", "mean_average_precision_at_r"]),
                     exclude=(),
                     avg_of_avgs=False,
                     return_per_class=False,

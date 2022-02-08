@@ -4,7 +4,7 @@ output_path: "."
 
 models:
   encoder_params:
-    pretrained_path: "results_nets/0.8670520231213873resnet50_cars.pth"
+    pretrained_path: "results_nets/0.8765219530193088resnet50_cars.pth"
     net_type: "resnet50"
     neck: 0
     last_stride: 0
@@ -22,8 +22,8 @@ models:
       num_layers: 2 
       aggregator: "add"
       num_heads: 8
-      attention: "dot" 
-      mlp: 1
+      attention: "gat2" 
+      mlp: 0
       dropout_mlp: 0.1
       norm1: 1
       norm2: 1
@@ -31,6 +31,7 @@ models:
       res2: 1
       dropout_1: 0.1
       dropout_2: 0.1
+      dropout_gat: 0.1
       mult_attr: 0
     classifier:
       neck: 1
@@ -83,4 +84,4 @@ eval_params:
   output_test_gnn: "plain"
   cat: 0
   # possible choices: recall, nmi, map
-  metric: "recall"
+  metric: "map"

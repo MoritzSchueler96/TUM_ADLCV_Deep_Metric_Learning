@@ -125,6 +125,25 @@ def GL_orig_RE_Inception(sz_crop=[384, 128], mean=[104, 117, 128],
     elif is_train:
         transform = transforms.Compose([
             RGBToBGR(),
+            transforms.RandomResizedCrop(sz_crop, scale=(0.16, 1)),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            ScaleIntensities([0, 1], [0, 255]),
+            normalize_transform
+        ])
+    else:
+        transform = transforms.Compose([
+            RGBToBGR(),
+            transforms.Resize(sz_resize),
+            transforms.CenterCrop(sz_crop),
+            transforms.ToTensor(),
+            ScaleIntensities([0, 1], [0, 255]),
+            normalize_transform
+        ])
+    """
+    elif is_train:
+        transform = transforms.Compose([
+            RGBToBGR(),
             transforms.RandomResizedCrop(sz_crop),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
@@ -140,7 +159,7 @@ def GL_orig_RE_Inception(sz_crop=[384, 128], mean=[104, 117, 128],
             ScaleIntensities([0, 1], [0, 255]),
             normalize_transform
         ])
-    
+    """
     print(transform)
 
     return transform

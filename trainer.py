@@ -130,7 +130,8 @@ class Trainer:
             params = list(set(self.encoder.parameters())) + list(set(self.gnn.parameters()))
             param_groups = [{"params": params, "lr": self.config["train_params"]["lr"]}]
 
-            self.opt = RAdam(param_groups, weight_decay=self.config["train_params"]["weight_decay"])
+            #self.opt = RAdam(param_groups, weight_decay=self.config["train_params"]["weight_decay"])
+            self.opt = torch.optim.RMSprop(param_groups, momentum=0.9, weight_decay=0.0001)
 
             self.get_loss_fn(self.config["train_params"]["loss_fn"], self.config["dataset"]["num_classes"])
 
@@ -189,6 +190,7 @@ class Trainer:
             # If not testing
             else:
                 logger.info("Epoch {}/{}".format(e, train_params["num_epochs"]))
+                """
                 if e == 31:
                     logger.info("reduce learning rate")
                     self.encoder.load_state_dict(torch.load(osp.join(self.save_folder_nets, self.fn + ".pth")))
@@ -203,6 +205,7 @@ class Trainer:
                     self.encoder.load_state_dict(torch.load(osp.join(self.save_folder_nets, self.fn + ".pth")))
                     for g in self.opt.param_groups:
                         g["lr"] = train_params["lr"] / 10.0
+                """
 
                 # Normal training with backpropagation
                 for x, Y, I, P in self.dl_tr:
@@ -225,8 +228,8 @@ class Trainer:
                         for param in self.center.parameters():
                             param.grad.data *= 1.0 / self.config["train_params"]["loss_fn"]["scaling_center"]
                         self.opt_center.step()
-
-                best_metric_iter = self.evaluate(eval_params, scores, e, best_metric_iter)
+                if e % 10 == 0:
+                    best_metric_iter = self.evaluate(eval_params, scores, e, best_metric_iter)
 
             # compute epoch loss mean
             [self.losses_mean[k].append(sum(v) / len(v)) for k, v in self.losses.items()]

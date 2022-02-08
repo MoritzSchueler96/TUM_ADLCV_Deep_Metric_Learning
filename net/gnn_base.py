@@ -488,7 +488,7 @@ class GraphAttentionV2Layer(nn.Module):
         # Dropout layer to be applied for attention
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self, h: torch.Tensor, adj_mat: torch.Tensor):
+    def forward(self, h: torch.Tensor, adj_mat: torch.Tensor, edge_attr: torch.Tensor = None):
         """
         * `h`, $\mathbf{h}$ is the input node embeddings of shape `[n_nodes, in_features]`.
         * `adj_mat` is the adjacency matrix of shape `[n_nodes, n_nodes, n_heads]`.
@@ -517,6 +517,8 @@ class GraphAttentionV2Layer(nn.Module):
         e = self.attn(self.activation(g_sum))
         # Remove the last dimension of size `1`
         e = e.squeeze(-1)
+        edge_attr = rearrange(edge_attr, "(n a)-> n a", n=n_nodes)
+        e = torch.einsum("n a h, n a-> n a h", e, edge_attr)
 
         # The adjacency matrix should have shape
         # `[n_nodes, n_nodes, n_heads]` or`[n_nodes, n_nodes, 1]`
@@ -609,10 +611,10 @@ class GATv2(nn.Module):
         # Apply dropout to the input
         x = self.dropout(x)
         # First graph attention layer
-        x = self.layer1(x, adj_mat)
+        x = self.layer1(x, adj_mat, edge_attr)
         # Activation function
         x = self.activation(x)
         # Dropout
         x = self.dropout(x)
         # Output layer (without activation) for logits
-        return self.output(x, adj_mat)
+        return self.output(x, adj_mat, edge_attr)

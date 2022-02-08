@@ -76,10 +76,10 @@ class MultiHeadDotProduct(nn.Module):
 
         # Calculate similarity: (Q @ K) / sqrt(d)
         sim = torch.einsum("h n a d , h n a d -> h n a", q, k) / math.sqrt(self.hdim)
-
         # Attention scores
-        # attn = torch.softmax(sim, dim=-2)
-        # attn = rearrange(attn, "h n a-> h (n a)")
+        #attn = torch.softmax(sim, dim=-2)
+        #attn = rearrange(attn, "h n a-> h (n a)")
+        #attn = attn * edge_attr
         sim = rearrange(sim, "h n a-> h (n a)")
         attn = deterministic_softmax(self.dev, sim, c, bs)
 

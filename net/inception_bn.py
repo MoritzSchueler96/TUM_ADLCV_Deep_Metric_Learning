@@ -15,6 +15,7 @@ https://github.com/dichotomies/proxy-nca.
 
 def bn_inception(pretrained=False, **kwargs):
     model = BNInception(**kwargs)
+    pretrained=False
     if pretrained:
         model.load_state_dict(torch.load('net/bn_inception_weights_pt04.pt'))
     else:
